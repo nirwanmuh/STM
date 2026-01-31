@@ -1,12 +1,13 @@
 import json
-import os 
+import os
 import io
 import base64
-import streamlit.components.v1 as components
 from typing import List, Dict
 import streamlit as st
+import streamlit.components.v1 as components
 
 from src.parser import parse_html_to_A_to_K
+
 
 # -------------------- Helpers --------------------
 def idr_to_int(s: str) -> int:
@@ -20,10 +21,12 @@ def idr_to_int(s: str) -> int:
     digits = "".join(ch for ch in str(s) if ch.isdigit())
     return int(digits) if digits else 0
 
+
 def fmt_idr(n: int) -> str:
     # Format ribuan gaya Indonesia: titik sebagai pemisah ribuan
     s = f"{n:,}".replace(",", ".")
     return f"IDR {s}"
+
 
 def ensure_states():
     if "parsed_AK" not in st.session_state:
@@ -34,6 +37,14 @@ def ensure_states():
     if "totals_LQ" not in st.session_state:
         # Letters L..Q
         st.session_state.totals_LQ: Dict[str, int] = {k: 0 for k in list("LMNOPQ")}
+    # State untuk fitur A-only PDF
+    if "bg_template_bytes_A" not in st.session_state:
+        st.session_state.bg_template_bytes_A = None
+    if "preview_A_pdf" not in st.session_state:
+        st.session_state.preview_A_pdf = None
+    if "val_A_override" not in st.session_state:
+        st.session_state.val_A_override = ""
+
 
 def recompute_totals():
     """
@@ -61,6 +72,7 @@ def recompute_totals():
 
     st.session_state.totals_LQ = LQ
 
+
 # =========================
 # PDF Builder: Overlay A saja (koordinat bebas)
 # =========================
@@ -83,28 +95,33 @@ def build_pdf_A_only(
     try:
         from reportlab.pdfgen import canvas
     except Exception as e:
-        import streamlit as st
         st.error("Package `reportlab` belum terpasang. Tambahkan ke requirements.txt. Detail: " + str(e))
         return b""
     try:
         from PyPDF2 import PdfReader, PdfWriter
     except Exception as e:
-        import streamlit as st
         st.error("Package `PyPDF2` belum terpasang. Tambahkan ke requirements.txt. Detail: " + str(e))
         return b""
 
-    # Baca ukuran halaman dari template
-    base_reader = PdfReader(io.BytesIO(background_pdf_bytes))
-    base_page = base_reader.pages[0]
-    page_w = float(base_page.mediabox.width)
-    page_h = float(base_page.mediabox.height)
+    # Baca ukuran halaman dari template (halaman pertama)
+    try:
+        base_reader = PdfReader(io.BytesIO(background_pdf_bytes))
+        base_page = base_reader.pages[0]
+        page_w = float(base_page.mediabox.width)
+        page_h = float(base_page.mediabox.height)
+    except Exception as e:
+        st.error(f"Gagal membaca template PDF: {e}")
+        return b""
 
     # Buat overlay transparan
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(page_w, page_h))
 
     font_name = "Helvetica-Bold" if bold else "Helvetica"
-    c.setFont(font_name, float(font_size))
+    try:
+        c.setFont(font_name, float(font_size))
+    except Exception:
+        c.setFont("Helvetica", 10)
 
     # Tulis nilai A di titik (x, y)
     if text_A:
@@ -115,16 +132,20 @@ def build_pdf_A_only(
     overlay_pdf = buf.getvalue()
 
     # Merge overlay ke background
-    overlay_reader = PdfReader(io.BytesIO(overlay_pdf))
-    overlay_page = overlay_reader.pages[0]
-    base_page.merge_page(overlay_page)
+    try:
+        overlay_reader = PdfReader(io.BytesIO(overlay_pdf))
+        overlay_page = overlay_reader.pages[0]
+        base_page.merge_page(overlay_page)
 
-    writer = PdfWriter()
-    writer.add_page(base_page)
+        writer = PdfWriter()
+        writer.add_page(base_page)
+        out_buf = io.BytesIO()
+        writer.write(out_buf)
+        return out_buf.getvalue()
+    except Exception as e:
+        st.error(f"Gagal menggabungkan overlay ke template: {e}")
+        return overlay_pdf
 
-    out_buf = io.BytesIO()
-    writer.write(out_buf)
-    return out_buf.getvalue()
 
 # -------------------- UI --------------------
 st.set_page_config(page_title="Trip HTML Parser (A–Q)", page_icon="🧭", layout="wide")
@@ -280,8 +301,6 @@ st.subheader("✍️ Tempatkan value **A** ke PDF (koordinat bebas)")
 
 # Pastikan template tersedia
 DEFAULT_BG_PATH = os.environ.get("SPJ_BG_PATH", "assets/spj_blank.pdf")
-if "bg_template_bytes_A" not in st.session_state:
-    st.session_state.bg_template_bytes_A = None
 
 # Coba muat otomatis dari repo (sekali saja)
 if not st.session_state.bg_template_bytes_A:
@@ -300,8 +319,12 @@ if tpl_file_A is not None:
     st.success("Template untuk penempatan A berhasil dimuat dari upload.")
 
 # Ambil value A dari hasil parse (jika ada)
-value_A = st.session_state.parsed_AK.get("A") if st.session_state.parsed_AK else ""
-st.text_input("Nilai A (Employee Name)", value=value_A or "", key="val_A_override", help="Bisa diedit jika perlu")
+value_A_default = st.session_state.parsed_AK.get("A") if st.session_state.parsed_AK else ""
+st.session_state.val_A_override = st.text_input(
+    "Nilai A (Employee Name)",
+    value=value_A_default or st.session_state.val_A_override or "",
+    help="Bisa diedit jika perlu"
+)
 
 colA1, colA2, colA3, colA4 = st.columns(4)
 with colA1:
@@ -309,19 +332,15 @@ with colA1:
 with colA2:
     y_A = st.number_input("Koordinat Y (pt; 0=tepi bawah)", value=700.0, step=1.0)
 with colA3:
-    size_A = st.number_input("Ukuran font", value=10, step=1, min_value=6, max_value=48)
+    size_A = st.number_input("Ukuran font", value=10, step=1, min_value=6, max_value=72)
 with colA4:
     bold_A = st.checkbox("Bold", value=False)
 
-colB1, colB2 = st.columns([1,1])
+colB1, colB2 = st.columns([1, 1])
 with colB1:
     do_preview_A = st.button("🔁 Preview A di PDF", use_container_width=True)
 with colB2:
     do_download_A = st.button("⬇️ Unduh PDF (A saja)", use_container_width=True)
-
-# State untuk preview
-if "preview_A_pdf" not in st.session_state:
-    st.session_state.preview_A_pdf = None
 
 # Render preview
 if do_preview_A:
@@ -337,23 +356,20 @@ if do_preview_A:
         )
         st.session_state.preview_A_pdf = pdf_bytes_A
 
-# --- Tampilkan preview jika ada (Chrome‑safe) ---
+# Tampilkan preview jika ada (Chrome-safe, gunakan <embed> dengan data: base64)
 if st.session_state.preview_A_pdf:
     b64 = base64.b64encode(st.session_state.preview_A_pdf).decode("utf-8")
     html = f"""
     <div style="height: 900px; width: 100%; border: 1px solid #ddd;">
-      <!-- Gunakan <embed> agar tidak 'navigate' ke data: di level iframe luar -->
       <embed
         src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
         type="application/pdf"
         width="100%"
-        height="100%">
-      </embed>
-
-      <!-- Fallback jika browser tidak mendukung embed -->
+        height="100%"
+      />
       <p style="padding:8px;font-family:sans-serif;">
-        Browser tidak mendukung pratinjau PDF tersemat. Anda masih bisa
-        <a href="data:application/pdf;base64,{b64}" download="preview.pdf">mengunduh PDF</a>.
+        Jika PDF tidak tampil, Anda tetap bisa
+        <a download="SPJ_A_only.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
       </p>
     </div>
     """
