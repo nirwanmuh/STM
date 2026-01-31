@@ -293,3 +293,25 @@ def build_spj_pdf_exact(AK: Dict[str, Optional[str]], LQ: Dict[str, int],
     writer.write(out_buf)
     return out_buf.getvalue()
 
+
+
+
+st.divider()
+st.subheader("📄 Export PDF — Format SPJ (Exact Layout)")
+
+# (Opsional) background template agar 100% sama secara visual
+bg_file = st.file_uploader("Opsional: unggah PDF template kosong sebagai background", type=["pdf"], key="bg_tpl")
+
+if st.button("🧾 Unduh PDF SPJ (Exact Layout)", use_container_width=True):
+    if not st.session_state.parsed_AK:
+        st.warning("Data A–K belum ada. Silakan parse HTML terlebih dahulu.")
+    else:
+        bg_bytes = bg_file.read() if bg_file is not None else None
+        pdf_bytes = build_spj_pdf_exact(st.session_state.parsed_AK, totals, overlay_template_bytes=bg_bytes)
+        st.download_button(
+            label="⬇️ Klik untuk mengunduh PDF SPJ (Exact Layout)",
+            data=pdf_bytes,
+            file_name="SPJ_Realisasi_Perjalanan_Dinas_exact.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
