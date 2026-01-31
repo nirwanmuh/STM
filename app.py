@@ -1,204 +1,295 @@
-import json
-from typing import List, Dict
-import streamlit as st
+# --- Tambahan import di atas ---
+from reportlab.pdfgen import canvas
+from PyPDF2 import PdfReader, PdfWriter  # opsional, hanya jika pakai overlay background
 
-from src.parser import parse_html_to_A_to_K
 
-# -------------------- Helpers --------------------
-def idr_to_int(s: str) -> int:
+# -------------------- PDF builder: Exact Layout ala contoh --------------------
+def build_spj_pdf_exact(AK: Dict[str, Optional[str]], LQ: Dict[str, int],
+                        overlay_template_bytes: Optional[bytes] = None) -> bytes:
     """
-    Konversi teks nominal menjadi integer rupiah.
-    Menerima format: 'IDR 1.200.000', '1,200,000', '1200000', dsb.
-    Aturan: buang semua karakter non-digit, abaikan desimal.
+    Bangun PDF SPJ dengan layout yang dibuat 'semirip mungkin' dengan contoh.
+    Jika overlay_template_bytes diberikan (PDF 1 halaman), gunakan sebagai background.
+    Nilai yang dipakai:
+      *A: ATAS NAMA (employee)
+      *B: TEMPAT ASAL
+      *C: TUJUAN
+      *D: TGL BERANGKAT (text)
+      *E: TGL KEMBALI (text)
+      *K: REALISASI HARIAN (nominal daily allowance total)
+      *L..*P: Lain-lain (bensin, hotel[CTM], toll, transportasi, parkir)
+      *Q: total semua lain-lain (kembali ke karyawan)
+      *H: Nama pejabat (kiri) - disesuaikan (Mengetahui)
+      *A: Nama pelaksana (kanan)
     """
-    if s is None:
-        return 0
-    digits = "".join(ch for ch in str(s) if ch.isdigit())
-    return int(digits) if digits else 0
+    # -------- ambil nilai A–Q --------
+    A = AK.get("A") or ""
+    B = AK.get("B") or ""
+    C = AK.get("C") or ""
+    D = AK.get("D") or ""
+    E = AK.get("E") or ""
+    G = AK.get("G") or ""
+    H = AK.get("H") or ""     # Mengetahui (kiri)
+    I = AK.get("I") or ""     # (jika ingin ditampilkan di bawah kiri/kolom tengah)
+    K_txt = AK.get("K") or "IDR 0"
 
-def fmt_idr(n: int) -> str:
-    # Format ribuan gaya Indonesia: titik sebagai pemisah ribuan
-    s = f"{n:,}".replace(",", ".")
-    return f"IDR {s}"
+    # Nominal -> angka
+    def idr_to_int(s: str) -> int:
+        digits = "".join(ch for ch in str(s) if ch.isdigit())
+        return int(digits) if digits else 0
 
-def ensure_states():
-    if "parsed_AK" not in st.session_state:
-        st.session_state.parsed_AK: Dict[str, str | None] = {}
-    if "reimburse_rows" not in st.session_state:
-        # list of dict: {"jenis": "bensin", "nominal": 1200000}
-        st.session_state.reimburse_rows: List[Dict] = []
-    if "totals_LQ" not in st.session_state:
-        # Letters L..Q
-        st.session_state.totals_LQ: Dict[str, int] = {k: 0 for k in list("LMNOPQ")}
+    K_val = idr_to_int(K_txt)
+    L_val = int(LQ.get("L", 0))
+    M_val = int(LQ.get("M", 0))
+    N_val = int(LQ.get("N", 0))
+    O_val = int(LQ.get("O", 0))
+    P_val = int(LQ.get("P", 0))
+    Q_val = int(LQ.get("Q", 0))
 
-def recompute_totals():
-    """
-    Hitung ulang total per jenis dan map ke L..Q
-    """
-    kind_to_letter = {
-        "bensin": "L",
-        "hotel": "M",
-        "toll": "N",
-        "transportasi": "O",
-        "parkir": "P",
-    }
-    totals = {k: 0 for k in kind_to_letter.keys()}
-    for row in st.session_state.reimburse_rows:
-        j = row["jenis"].lower()
-        totals[j] = totals.get(j, 0) + int(row["nominal"])
+    # Hitung jumlah hari inklusif dari teks D, E (kalau bisa diparse)
+    def parse_date_or_none(s: str) -> Optional[datetime]:
+        for fmt in ("%d %B, %Y", "%d %b, %Y", "%d %B %Y", "%d %b %Y", "%d/%B/%Y", "%d/%b/%Y"):
+            try:
+                return datetime.strptime(s, fmt)
+            except Exception:
+                continue
+        return None
 
-    # simpan ke L..P
-    LQ = {}
-    for jenis, letter in kind_to_letter.items():
-        LQ[letter] = totals.get(jenis, 0)
+    d_dt = parse_date_or_none(D)
+    e_dt = parse_date_or_none(E)
+    hari_inclusive = None
+    if d_dt and e_dt:
+        hari_inclusive = (e_dt.date() - d_dt.date()).days + 1
 
-    # Q = total semua
-    LQ["Q"] = sum(totals.values())
+    # Format IDR (tanpa "Rp." untuk meniru contoh angka yang hanya "2,800,000", nanti kita tambahkan 'Rp.' di tempat yang perlu)
+    def fmt_n(n: int) -> str:
+        return f"{n:,}".replace(",", ".")
 
-    st.session_state.totals_LQ = LQ
+    # ------- Siapkan buffer & ukuran kertas ------
+    # Default pakai A4 portrait (mirip contoh)
+    PAGE_W, PAGE_H = A4  # ~ (595.28 pt x 841.89 pt)
 
-# -------------------- UI --------------------
-st.set_page_config(page_title="Trip HTML Parser (A–Q)", page_icon="🧭", layout="wide")
-ensure_states()
+    # Jika kita pakai overlay_template_bytes (opsional), pastikan ukuran canvas mengikuti ukuran halaman template
+    if overlay_template_bytes:
+        base_reader = PdfReader(io.BytesIO(overlay_template_bytes))
+        page0 = base_reader.pages[0]
+        # PyPDF2 pakai koord PDF points
+        PAGE_W = float(page0.mediabox.width)
+        PAGE_H = float(page0.mediabox.height)
 
-st.title("🧭 Trip HTML Parser (A–Q)")
-st.caption("Tempel/unggah HTML Trip Detail → Ekstrak A–K → Input Reimburse → Simpan L–Q.")
+    packet = io.BytesIO()
+    c = canvas.Canvas(packet, pagesize=(PAGE_W, PAGE_H))
 
-with st.expander("Cara pakai", expanded=False):
-    st.markdown(
-        "- **Langkah 1**: Tempel atau unggah HTML, lalu klik **Parse HTML** untuk mendapatkan A–K.\n"
-        "- **Langkah 2**: Di bagian **Reimburse**, pilih jenis biaya dan masukkan nominal, klik **Tambah**.\n"
-        "- **Langkah 3**: Lihat tabel, hapus baris jika perlu. Total otomatis tersimpan ke **L–Q**.\n"
-        "- **Langkah 4**: Unduh JSON bila diperlukan."
-    )
+    # Gaya font dasar
+    c.setTitle("SPJ Realisasi Biaya Perjalanan Dinas")
+    c.setAuthor("Auto-generated by Streamlit")
 
-tab1, tab2 = st.tabs(["📄 Tempel HTML", "📤 Unggah File HTML"])
-html_text = ""
+    # Util: teks
+    def draw_text(x, y, text, size=10, bold=False, align="left"):
+        font = "Helvetica-Bold" if bold else "Helvetica"
+        c.setFont(font, size)
+        if align == "left":
+            c.drawString(x, y, text)
+        elif align == "center":
+            c.drawCentredString(x, y, text)
+        elif align == "right":
+            c.drawRightString(x, y, text)
 
-with tab1:
-    html_text_input = st.text_area(
-        "Tempel HTML kamu di sini",
-        height=420,
-        placeholder="Tempel seluruh HTML Trip Detail di sini...",
-    )
-    if html_text_input:
-        html_text = html_text_input
+    # Util: label+nilai (tiga kolom)
+    def draw_row(y, label, value, label_w=120, colon_w=10, val_w=360, size=10, bold_label=False):
+        x0 = 40  # margin kiri
+        draw_text(x0, y, label, size=size, bold=bold_label)
+        draw_text(x0 + label_w, y, ":", size=size)
+        draw_text(x0 + label_w + colon_w, y, value, size=size)
 
-with tab2:
-    uploaded = st.file_uploader("Unggah file .html", type=["html", "htm"])
-    if uploaded is not None:
-        html_text = uploaded.read().decode("utf-8", errors="ignore")
+    # ====== HEADER (judul form) ======
+    # Posisi y dihitung dari bawah; contoh A4 tinggi 842pt. Kita taruh judul di atas tengah.
+    draw_text(PAGE_W/2, PAGE_H - 60, "FORMULIR PERHITUNGAN REALISASI BIAYA PERJALANAN DINAS/ PINDAH",
+              size=11, bold=True, align="center")
 
-parse_btn = st.button("🔎 Parse HTML", type="primary", use_container_width=True)
+    # ====== BLOK IDENTITAS ======
+    y = PAGE_H - 100
+    draw_row(y,      "SPPD NO", "")
+    y -= 16
+    draw_row(y,      "ATAS NAMA", A)         # *A
+    y -= 16
+    draw_row(y,      "TEMPAT ASAL", B)       # *B
+    y -= 16
+    draw_row(y,      "TUJUAN", C)            # *C
+    y -= 16
+    draw_row(y,      "TGL BERANGKAT", D)     # *D
+    y -= 16
+    draw_row(y,      "TGL KEMBALI", E)       # *E
+    y -= 16
+    hari_str = str(hari_inclusive) if hari_inclusive is not None else ""
+    # JUMLAH HARI: "7   Hari"
+    draw_row(y,      "JUMLAH HARI", f"{hari_str}", size=10)
+    draw_text(40 + 120 + 10 + 50, y, "Hari", size=10)  # tulisan "Hari" di kolom kanan kecil
 
-# -------------------- Parse A–K --------------------
-if parse_btn:
-    if not html_text or not html_text.strip():
-        st.error("Silakan tempel atau unggah HTML terlebih dahulu.")
-        st.stop()
+    # ====== A. REALISASI BIAYA HARIAN ======
+    y -= 28
+    draw_text(40, y, "A. REALISASI BIAYA HARIAN:", size=10, bold=True)
+    y -= 18
+    draw_text(40, y, "PENERIMAAN", size=10)
+    y -= 16
+    # "Rp." + "HARI TERTULIS SPPD" (di contoh hanya label)
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, "HARI TERTULIS SPPD", size=10)
 
-    data_AK = parse_html_to_A_to_K(html_text)
-    st.session_state.parsed_AK = data_AK
+    y -= 16
+    draw_text(40, y, "REALISASI", size=10)
 
-# Tampilkan A–K jika sudah ada
-if st.session_state.parsed_AK:
-    st.subheader("Hasil Ekstraksi **A–K**")
-    data = st.session_state.parsed_AK
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**A** – Employee Name:", data.get("A"))
-        st.write("**B** – Trip From:", data.get("B"))
-        st.write("**C** – Trip To:", data.get("C"))
-        st.write("**D** – Depart Date:", data.get("D"))
-        st.write("**E** – Return Date:", data.get("E"))
-    with col2:
-        st.write("**F** – Purpose:", data.get("F"))
-        st.write("**G** – Position:", data.get("G"))
-        st.write("**H** – (Timeline) Role:", data.get("H"))
-        st.write("**I** – (Timeline) By:", data.get("I"))
-        st.write("**J** – Daily Allowance (Days):", data.get("J"))
-        st.write("**K** – Daily Allowance Total:", data.get("K"))
+    y -= 16
+    # "Rp." + *K + "REALISASI HARI"
+    draw_text(40, y, "Rp.", size=10)
+    draw_text(80, y, f"{fmt_n(K_val)}", size=10)   # *K sebagai angka
+    draw_text(180, y, "REALISASI HARI", size=10)
 
-    st.divider()
+    y -= 16
+    # baris jumlah hari lagi (seperti contoh)
+    draw_text(40, y, f"{hari_str}", size=10)
+    draw_text(60, y, "Hari", size=10)
 
-# -------------------- Reimburse Section (L–Q) --------------------
-st.subheader("🧾 Reimburse")
+    y -= 16
+    draw_text(40, y, "SELISIH KURANG (kembali ke karyawan)", size=10)
 
-# Form input
-with st.form("reimburse_form", clear_on_submit=True):
-    jenis = st.selectbox(
-        "Jenis biaya",
-        options=["bensin", "hotel", "toll", "transportasi", "parkir"],
-        index=0,
-        help="Pilih kategori reimburse",
-    )
-    nominal_text = st.text_input(
-        "Nominal (contoh: 1200000 atau IDR 1.200.000)",
-        value="",
-        help="Masukkan angka saja atau boleh pakai format IDR/berpemisah ribuan",
-    )
-    submitted = st.form_submit_button("➕ Tambah", use_container_width=True)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10)
+    draw_text(80, y, f"{fmt_n(K_val)}", size=10)  # *K lagi sesuai contoh
+    draw_text(150, y, "(AKOMODASI DITANGGUNG PANITIA)", size=10)
 
-    if submitted:
-        nominal_val = idr_to_int(nominal_text)
-        if nominal_val <= 0:
-            st.warning("Nominal harus lebih dari 0.")
-        else:
-            st.session_state.reimburse_rows.append({"jenis": jenis, "nominal": nominal_val})
-            recompute_totals()
-            st.success(f"Berhasil menambah {jenis} sebesar {fmt_idr(nominal_val)}")
+    y -= 16
+    draw_text(40, y, "SELISIH TAMBAH (kembali ke perusahaan)", size=10)
 
-# Tabel Reimburse
-st.markdown("### Tabel Reimburse")
-if not st.session_state.reimburse_rows:
-    st.info("Belum ada data reimburse. Tambahkan melalui form di atas.")
-else:
-    # Render baris manual agar ada tombol Hapus per baris
-    header_cols = st.columns([0.7, 3, 3, 2])
-    header_cols[0].markdown("**No.**")
-    header_cols[1].markdown("**Jenis**")
-    header_cols[2].markdown("**Nominal**")
-    header_cols[3].markdown("**Aksi**")
+    y -= 16
+    draw_text(40, y, "Rp.", size=10)
+    draw_text(80, y, "-", size=10)
 
-    for idx, row in enumerate(st.session_state.reimburse_rows, start=1):
-        c1, c2, c3, c4 = st.columns([0.7, 3, 3, 2])
-        c1.write(idx)
-        c2.write(row["jenis"].capitalize())
-        c3.write(fmt_idr(int(row["nominal"])))
-        if c4.button("Hapus", key=f"del_{idx}", use_container_width=True):
-            # Hapus entry dan hitung ulang
-            del st.session_state.reimburse_rows[idx - 1]
-            recompute_totals()
-            st.experimental_rerun()
+    # ====== B. TRANSPORTASI (PESAWAT) ======
+    y -= 24
+    draw_text(40, y, "B. REALISASI BIAYA FASILITAS TRANSPORTASI (PESAWAT):", size=10, bold=True)
+    y -= 18
+    draw_text(40, y, "PENERIMAAN", size=10)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10)
+    y -= 16
+    draw_text(40, y, "REALISASI", size=10)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, "-", size=10)
+    y -= 16
+    draw_text(40, y, "SELISIH KURANG (kembali ke karyawan)", size=10)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, "-", size=10)
+    y -= 16
+    draw_text(40, y, "SELISIH TAMBAH (kembali ke perusahaan)", size=10)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, "-", size=10)
 
-# Total per jenis & map ke L..Q
-recompute_totals()
-totals = st.session_state.totals_LQ
+    # ====== C. PENGINAPAN ======
+    y -= 24
+    draw_text(40, y, "C. REALISASI BIAYA PENGINAPAN:", size=10, bold=True)
+    y -= 18
+    draw_text(40, y, "PENERIMAAN", size=10)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10)
+    y -= 16
+    draw_text(40, y, "REALISASI", size=10)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, "-", size=10); draw_text(110, y, "(CTM)", size=10, bold=False)
+    y -= 16
+    draw_text(40, y, "SELISIH KURANG (kembali ke karyawan)", size=10)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, "-", size=10)
+    y -= 16
+    draw_text(40, y, "SELISIH TAMBAH (kembali ke perusahaan)", size=10)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, "-", size=10)
 
-st.markdown("### Total per Jenis (tersimpan ke value **L–Q**)")
-tcols = st.columns(6)
-tcols[0].metric("**L – Bensin**", fmt_idr(totals["L"]))
-tcols[1].metric("**M – Hotel**", fmt_idr(totals["M"]))
-tcols[2].metric("**N – Toll**", fmt_idr(totals["N"]))
-tcols[3].metric("**O – Transportasi**", fmt_idr(totals["O"]))
-tcols[4].metric("**P – Parkir**", fmt_idr(totals["P"]))
-tcols[5].metric("**Q – Total Semua**", fmt_idr(totals["Q"]))
+    # ====== D. JENIS BIAYA LAIN-LAIN ======
+    y -= 24
+    draw_text(40, y, "D. JENIS BIAYA LAIN-LAIN:", size=10, bold=True)
+    y -= 18
+    draw_text(40, y, "- REALISASI BENSIN", size=10);        draw_text(220, y, "Rp.", size=10); draw_text(250, y, fmt_n(L_val), size=10)  # *L
+    y -= 16
+    draw_text(40, y, "- REALISASI HOTEL (CTM)", size=10);    draw_text(220, y, "Rp.", size=10); draw_text(250, y, fmt_n(M_val), size=10)  # *M
+    y -= 16
+    draw_text(40, y, "- REALISASI TOLL", size=10);           draw_text(220, y, "Rp", size=10);  draw_text(250, y, fmt_n(N_val), size=10)  # *N
+    y -= 16
+    draw_text(40, y, "- REALISASI TRANSPORTASI", size=10);   draw_text(220, y, "Rp", size=10);  draw_text(250, y, fmt_n(O_val), size=10)  # *O
+    y -= 16
+    draw_text(40, y, "- REALISASI PARKIR", size=10);         draw_text(220, y, "Rp", size=10);  draw_text(250, y, fmt_n(P_val), size=10)  # *P
+    y -= 16
+    draw_text(40, y, "SELISIH KURANG (kembali ke karyawan)", size=10)
+    y -= 16
+    draw_text(40, y, fmt_n(Q_val), size=10)  # *Q (di contoh tampil sendiri sebagai angka)
 
-# Gabungkan A–K + L–Q untuk JSON/unduhan
-combined = {
-    **st.session_state.parsed_AK,
-    **{k: totals[k] for k in "LMNOPQ"},
-}
+    # ====== Ringkasan I / II / TOTAL ======
+    y -= 24
+    draw_text(40, y, "I. TOTAL SELISIH KURANG :", size=10, bold=True)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, fmt_n(Q_val), size=10, bold=True)   # *Q
+    y -= 16
+    draw_text(40, y, "( total kembali ke karyawan)", size=9)
+    y -= 20
 
-st.divider()
-st.subheader("JSON (A–Q)")
-json_str = json.dumps(combined, ensure_ascii=False, indent=2)
-st.code(json_str, language="json")
+    draw_text(40, y, "II. TOTAL SELISIH TAMBAH :", size=10, bold=True)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, "-", size=10, bold=True)
+    y -= 16
+    draw_text(40, y, "(total kembali ke perusahaan)", size=9)
+    y -= 20
 
-st.download_button(
-    label="💾 Unduh JSON (A–Q)",
-    data=json_str,
-    file_name="trip_A_to_Q.json",
-    mime="application/json",
-    use_container_width=True,
-)
+    draw_text(40, y, "TOTAL SELISIH :", size=10, bold=True)
+    y -= 16
+    draw_text(40, y, "Rp.", size=10); draw_text(80, y, fmt_n(Q_val), size=10, bold=True)   # *Q
+
+    # ====== Mengetahui / Tanda Tangan ======
+    y -= 40
+    draw_text(40, y, "Mengetahui", size=10)
+    y -= 18
+    # Baris jabatan
+    draw_text(40, y, "Pemimpin Unit Kerja/Fungsi", size=10)
+    # kolom tengah (mis.: admin/pejabat lain – dari contoh ada 3 kolom). Biarkan kosong/opsional.
+    draw_text(PAGE_W/2 - 50, y, "", size=10)
+    draw_text(PAGE_W - 220, y, "Pelaksana Perjalanan Dinas", size=10)
+
+    # Garis tanda tangan (opsional): bisa tambahkan line
+    y -= 36
+    # Nama-nama
+    draw_text(40, y, H if H else I, size=10, bold=True)               # *H atau *I (kiri)
+    draw_text(PAGE_W/2 - 50, y, "", size=10, bold=True)               # kolom tengah (kosong)
+    draw_text(PAGE_W - 220, y, A, size=10, bold=True)                 # *A (kanan)
+
+    # Footnote tanggal & jabatan (opsional, mengambil G di bawah kanan seperti contoh)
+    y -= 28
+    # Tanggal dikosongkan—contoh menampilkan rentang; kita tampilkan D/E di bawah:
+    draw_text(40, y, D, size=10)
+    draw_text(180, y, E, size=10)
+    y -= 16
+    draw_text(40, y, "_Dilarang Mengcopy / Menyebarluaskan Tanpa Izin MR _", size=9)
+    y -= 16
+    if G:
+        draw_text(40, y, G, size=10)
+
+    # Selesai menulis
+    c.showPage()
+    c.save()
+    overlay_pdf = packet.getvalue()
+
+    # === Jika tidak ada template background, langsung pakai overlay_pdf sebagai hasil ===
+    if not overlay_template_bytes:
+        return overlay_pdf
+
+    # === Mode OVERLAY: gabungkan overlay di atas template background (1 halaman) ===
+    base_reader = PdfReader(io.BytesIO(overlay_template_bytes))
+    base_page = base_reader.pages[0]
+
+    overlay_reader = PdfReader(io.BytesIO(overlay_pdf))
+    overlay_page = overlay_reader.pages[0]
+
+    base_page.merge_page(overlay_page)  # timpa teks A–Q di atas background template
+
+    writer = PdfWriter()
+    writer.add_page(base_page)
+    out_buf = io.BytesIO()
+    writer.write(out_buf)
+    return out_buf.getvalue()
+
