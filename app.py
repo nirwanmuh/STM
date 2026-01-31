@@ -1,6 +1,8 @@
 import json
 import os 
 import io
+import base64
+import streamlit.components.v1 as components
 from typing import List, Dict
 import streamlit as st
 
@@ -335,19 +337,29 @@ if do_preview_A:
         )
         st.session_state.preview_A_pdf = pdf_bytes_A
 
-# Tampilkan preview jika ada
+# --- Tampilkan preview jika ada (Chrome‑safe) ---
 if st.session_state.preview_A_pdf:
-    try:
-        import base64
-        import streamlit.components.v1 as components
-        b64 = base64.b64encode(st.session_state.preview_A_pdf).decode("utf-8")
-        components.html(
-            f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="900px" style="border:none;"></iframe>',
-            height=920,
-            scrolling=True,
-        )
-    except Exception as e:
-        st.warning(f"Gagal menampilkan preview inline: {e}")
+    b64 = base64.b64encode(st.session_state.preview_A_pdf).decode("utf-8")
+    html = f"""
+    <div style="height: 900px; width: 100%; border: 1px solid #ddd;">
+      <!-- Gunakan <embed> agar tidak 'navigate' ke data: di level iframe luar -->
+      <embed
+        src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
+        type="application/pdf"
+        width="100%"
+        height="100%">
+      </embed>
+
+      <!-- Fallback jika browser tidak mendukung embed -->
+      <p style="padding:8px;font-family:sans-serif;">
+        Browser tidak mendukung pratinjau PDF tersemat. Anda masih bisa
+        <a href="data:application/pdf;base64,{b64}" download="preview.pdf">mengunduh PDF</a>.
+      </p>
+    </div>
+    """
+    components.html(html, height=920, scrolling=True)
+else:
+    st.info("Preview belum tersedia. Klik **🔁 Preview A di PDF** setelah mengatur koordinat.")
 
 # Tombol unduh
 if do_download_A:
