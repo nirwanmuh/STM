@@ -67,7 +67,7 @@ def ensure_states():
             "G": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
             "H": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
             "I": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
-            # K..Q: X dihitung dari kanan (from_right=True), teks rata kiri
+            # K..Q: X dihitung dari kanan (from_right=True), teks rata kanan
             "K": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
             "L": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
             "M": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
@@ -79,9 +79,7 @@ def ensure_states():
 
 
 def recompute_totals():
-    """
-    Hitung ulang total per jenis dan map ke L..Q
-    """
+    """Hitung ulang total per jenis dan map ke L..Q"""
     kind_to_letter = {"bensin": "L", "hotel": "M", "toll": "N", "transportasi": "O", "parkir": "P"}
     totals = {k: 0 for k in kind_to_letter.keys()}
     for row in st.session_state.reimburse_rows:
@@ -146,7 +144,7 @@ def get_value_for_key(key: str) -> str:
 
 
 # =========================
-# PDF Builder: Multi (A–Q) + dukung X dari kanan
+# PDF Builder: Multi (A–Q) + dukung X dari kanan & rata kanan
 # =========================
 def build_pdf_multi(
     background_pdf_bytes: bytes,
@@ -154,7 +152,8 @@ def build_pdf_multi(
 ) -> bytes:
     """
     Tulis beberapa teks (A..Q) di koordinat berbeda dalam satu overlay di atas template PDF.
-    - Jika item['from_right'] = True, maka x_final = page_width - x_input (teks tetap rata kiri).
+    - Jika item['from_right'] = True, maka anchor = page_w - x_input dan gambar dengan drawRightString (rata kanan).
+    - Jika False, x dianggap dari kiri dan gambar dengan drawString (rata kiri).
     """
     if not background_pdf_bytes:
         return b""
@@ -184,13 +183,11 @@ def build_pdf_multi(
         text = str(it.get("text") or "").strip()
         if not text:
             continue
-        x = float(it.get("x", 0))
+        x = float(it.get("x", 0))          # untuk from_right=True, ini adalah jarak dari kanan
         y = float(it.get("y", 0))
         size = int(it.get("size", 10))
         bold = bool(it.get("bold", False))
         from_right = bool(it.get("from_right", False))
-        # Transform X jika patokan dari kanan
-        x_final = (page_w - x) if from_right else x
 
         font = "Helvetica-Bold" if bold else "Helvetica"
         try:
@@ -198,8 +195,14 @@ def build_pdf_multi(
         except Exception:
             c.setFont("Helvetica", 10)
 
-        # Rata kiri (drawString) sesuai permintaan
-        c.drawString(x_final, y, text)
+        if from_right:
+            # X diinput sebagai jarak dari kanan -> anchor = page_w - x
+            x_anchor = page_w - x
+            # Tulis rata kanan ke anchor
+            c.drawRightString(x_anchor, y, text)
+        else:
+            # Normal: dari kiri, rata kiri
+            c.drawString(x, y, text)
 
     c.showPage()
     c.save()
@@ -234,7 +237,7 @@ with st.expander("Cara pakai (singkat)", expanded=False):
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
         "- **Langkah 2**: Isi **Reimburse** untuk menghasilkan L–Q.\n"
         "- **Langkah 3**: Siapkan **template PDF** (otomatis dari `assets/spj_blank.pdf` atau upload manual).\n"
-        "- **Langkah 4**: A–E,J sudah **fixed** (koordinat & size). K–Q: **X dari kanan** (tulisan rata kiri). Atur di UI.\n"
+        "- **Langkah 4**: A–E,J sudah **fixed** (koordinat & size). K–Q: **X diisi sebagai jarak dari kanan** & **tulisan rata kanan**.\n"
         "- **Langkah 5**: Klik **Preview** untuk Live View PDF; klik **Download** untuk mengunduh."
     )
 
@@ -389,7 +392,7 @@ with st.expander("📍 Koordinat & Style", expanded=True):
             st.number_input(f"{k} · X", value=float(cs["x"]), step=0.5, disabled=True, key=f"fx_{k}")
             st.number_input(f"{k} · Y", value=float(cs["y"]), step=0.5, disabled=True, key=f"fy_{k}")
             st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, disabled=True, key=f"fs_{k}")
-    st.caption("Kordinat & size A–E,J dikunci (tidak bisa diubah). Nilainya tetap bisa dioverride pada panel di atas jika perlu.")
+    st.caption("Koordinat & size A–E,J dikunci (tidak bisa diubah). Nilainya tetap bisa dioverride di panel di atas jika perlu.")
 
     st.markdown("**Info Lain (F–I) – normal (patokan kiri)**")
     group_fi = ["F", "G", "H", "I"]
@@ -403,18 +406,20 @@ with st.expander("📍 Koordinat & Style", expanded=True):
             st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
             st.session_state.coord_style[k]["fmt"] = st.selectbox(f"{k} · Format", options=["raw","number","auto"], index=["raw","number","auto"].index(cs.get("fmt","raw")), key=f"f_{k}")
 
-    st.markdown("**Nominal (K–Q) – X dihitung dari kanan (tulisan rata kiri)**")
+    st.markdown("**Nominal (K–Q) – X = jarak dari kanan, tulisan rata kanan**")
     group_kq = ["K", "L", "M", "N", "O", "P", "Q"]
-    # Tampilkan input X sebagai "jarak dari kanan"
     cols_kq = st.columns(7)
     for i, k in enumerate(group_kq):
         cs = st.session_state.coord_style[k]
         with cols_kq[i]:
-            st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X dari kanan", value=float(cs["x"]), step=1.0, key=f"x_{k}_right")  # disimpan dalam 'x' tapi artinya jarak dari kanan
+            # Simpan X sebagai jarak dari kanan (akan dikonversi di builder)
+            st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X dari kanan", value=float(cs["x"]), step=1.0, key=f"x_{k}_right")
             st.session_state.coord_style[k]["y"] = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
             st.session_state.coord_style[k]["size"] = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
             st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
-            st.session_state.coord_style[k]["fmt"] = st.selectbox(f"{k} · Format", options=["raw","number","auto"], index=["raw","number","auto"].index(cs.get("fmt","number")), key=f"f_{k}")
+            st.session_state.coord_style[k]["fmt"] = st.selectbox(
+                f"{k} · Format", options=["raw","number","auto"], index=["raw","number","auto"].index(cs.get("fmt","number")), key=f"f_{k}"
+            )
 
 # Tombol preview & download
 pcol1, pcol2 = st.columns(2)
@@ -430,16 +435,23 @@ def _items_from_state() -> List[Dict[str, object]]:
         y = float(style.get("y", 0))
         size = int(style.get("size", 10))
         bold = bool(style.get("bold", False))
-        from_right = bool(style.get("from_right", False))  # True untuk K..Q
-        # Untuk A..E,J yang fixed, biarpun x/y=0 kita tetap masukkan (karena fixed),
-        # tapi di definisi awal sudah diisi nilai default yang non-zero.
-        if x == 0 and y == 0 and not style.get("locked", False):
-            # skip nilai yang belum diset user
+        from_right = bool(style.get("from_right", False))  # True untuk K..Q (X dari kanan)
+        locked = bool(style.get("locked", False))
+
+        # Skip jika belum ada koordinat (x=y=0) dan tidak locked
+        if x == 0 and y == 0 and not locked:
             continue
+
         txt = get_value_for_key(k).strip()
         if not txt:
             continue
-        items.append({"text": txt, "x": x, "y": y, "size": size, "bold": bold, "from_right": from_right})
+
+        items.append({
+            "text": txt,
+            "x": x, "y": y,
+            "size": size, "bold": bold,
+            "from_right": from_right,
+        })
     return items
 
 # Generate preview
@@ -453,17 +465,16 @@ if do_preview:
         else:
             st.session_state.preview_pdf = build_pdf_multi(st.session_state.bg_template_bytes, items)
 
-# Tampilkan preview (Chrome-safe)
+# Tampilkan preview (Chrome-safe, pakai <embed>)
 if st.session_state.preview_pdf:
     b64 = base64.b64encode(st.session_state.preview_pdf).decode("utf-8")
     html = f"""
     <div style="height: 920px; width: 100%; border: 1px solid #ddd;">
-      <embed type="application/pdf"
-             src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
-             width="100%" height="100%"/>
+      <embed src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
+             type="application/pdf" width="100%" height="100%"/>
       <p style="padding:8px;font-family:sans-serif;">
         Jika PDF tidak tampil, Anda bisa
-        <a download="SPJ_overlay_preview.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
+        <a download="preview.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
       </p>
     </div>
     """
