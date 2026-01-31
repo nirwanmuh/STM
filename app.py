@@ -67,4 +67,3 @@ if parse_btn:
         mime="application/json",
         use_container_width=True,
     )
-``
