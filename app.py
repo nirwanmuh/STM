@@ -48,33 +48,33 @@ def ensure_states():
         st.session_state.bg_template_bytes: Optional[bytes] = None
     if "preview_pdf" not in st.session_state:
         st.session_state.preview_pdf: Optional[bytes] = None
-    # Nilai override (opsional)
+    # Override nilai (opsional)
     if "val_overrides" not in st.session_state:
         st.session_state.val_overrides: Dict[str, str] = {}
-    # Koordinat & style per value (A..Q)
+    # Gaya/koordinat per value
     if "coord_style" not in st.session_state:
-        # Nilai default koordinat:
-        # A diminta default x=190pt, y=666pt; yang lain bisa diset via UI.
+        # A,B,C,D,E,J -> FIXED (tidak diedit user):
         st.session_state.coord_style = {
-            # key: {"x": float, "y": float, "size": int, "bold": bool, "fmt": str}
-            # fmt: "auto" | "raw" | "number"
-            "A": {"x": 190.0, "y": 666.0, "size": 10, "bold": False, "fmt": "raw"},
-            "B": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
-            "C": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
-            "D": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
-            "E": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
-            "F": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
-            "G": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
-            "H": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
-            "I": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
-            "J": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},  # days
-            "K": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
-            "L": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
-            "M": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
-            "N": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
-            "O": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
-            "P": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
-            "Q": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
+            # fmt: "raw" | "number" | "auto"
+            "A": {"x": 190.0, "y": 666.0,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
+            "B": {"x": 190.0, "y": 652.5,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
+            "C": {"x": 190.0, "y": 639.0,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
+            "D": {"x": 190.0, "y": 625.5,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
+            "E": {"x": 190.0, "y": 612.0,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
+            "J": {"x": 190.0, "y": 600.0,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
+            # F,G,H,I (bebas edit normal dari kiri):
+            "F": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
+            "G": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
+            "H": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
+            "I": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
+            # K..Q: X dihitung dari kanan (from_right=True), teks rata kiri
+            "K": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
+            "L": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
+            "M": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
+            "N": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
+            "O": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
+            "P": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
+            "Q": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
         }
 
 
@@ -82,26 +82,13 @@ def recompute_totals():
     """
     Hitung ulang total per jenis dan map ke L..Q
     """
-    kind_to_letter = {
-        "bensin": "L",
-        "hotel": "M",
-        "toll": "N",
-        "transportasi": "O",
-        "parkir": "P",
-    }
+    kind_to_letter = {"bensin": "L", "hotel": "M", "toll": "N", "transportasi": "O", "parkir": "P"}
     totals = {k: 0 for k in kind_to_letter.keys()}
     for row in st.session_state.reimburse_rows:
         j = row["jenis"].lower()
         totals[j] = totals.get(j, 0) + int(row["nominal"])
-
-    # simpan ke L..P
-    LQ = {}
-    for jenis, letter in kind_to_letter.items():
-        LQ[letter] = totals.get(jenis, 0)
-
-    # Q = total semua
+    LQ = {letter: totals.get(jenis, 0) for jenis, letter in kind_to_letter.items()}
     LQ["Q"] = sum(totals.values())
-
     st.session_state.totals_LQ = LQ
 
 
@@ -111,21 +98,17 @@ def get_value_for_key(key: str) -> str:
       - cek override (jika user isi manual),
       - jika tidak ada, ambil dari parsed_AK (A..K),
       - untuk L..Q ambil dari totals_LQ,
-      - lakukan formatting sesuai 'fmt'.
+      - formatting sesuai 'fmt'.
     """
-    # Override manual dari user?
     ov = st.session_state.val_overrides.get(key)
     if ov not in (None, ""):
         return str(ov)
 
-    # Data A..K dari parse
     ak = st.session_state.parsed_AK or {}
     lq = st.session_state.totals_LQ or {}
 
-    # Default text (raw) berdasarkan sumber
     if key in list("ABCDEFGHIJK"):
         raw = ak.get(key)
-        # Untuk J (days) kadang text "3" atau "3 Day". Kita ambil digitnya saja.
         if key == "J" and raw:
             digits = "".join(ch for ch in str(raw) if ch.isdigit())
             raw = digits or raw
@@ -134,47 +117,44 @@ def get_value_for_key(key: str) -> str:
     else:
         raw = ""
 
-    # Formatting sesuai setting
     style = st.session_state.coord_style.get(key, {})
     fmt_mode = style.get("fmt", "raw")
 
     if fmt_mode == "number":
         try:
-            # Raw bisa berupa "IDR 1.200.000" atau int → normalkan dulu
             val = raw
             if isinstance(val, str):
                 val = idr_to_int(val)
             if isinstance(val, (int, float)):
                 return fmt_n(int(val))
-            return str(raw or "")
         except Exception:
-            return str(raw or "")
-
-    elif fmt_mode == "raw":
+            pass
         return str(raw or "")
 
-    # "auto": kalau angka → number, kalau bukan → raw
-    try:
-        if isinstance(raw, (int, float)):
-            return fmt_n(int(raw))
-        # string angka?
-        test = idr_to_int(str(raw))
-        if test > 0:
-            return fmt_n(test)
-    except Exception:
-        pass
+    if fmt_mode == "auto":
+        try:
+            if isinstance(raw, (int, float)):
+                return fmt_n(int(raw))
+            test = idr_to_int(str(raw))
+            if test > 0:
+                return fmt_n(test)
+        except Exception:
+            pass
+        return str(raw or "")
+
     return str(raw or "")
 
 
 # =========================
-# PDF Builder: Multi (A–Q)
+# PDF Builder: Multi (A–Q) + dukung X dari kanan
 # =========================
 def build_pdf_multi(
     background_pdf_bytes: bytes,
-    items: List[Dict[str, object]],  # [{ "text": str, "x": float, "y": float, "size": int, "bold": bool }, ...]
+    items: List[Dict[str, object]],  # [{ "text": str, "x": float, "y": float, "size": int, "bold": bool, "from_right": bool }, ...]
 ) -> bytes:
     """
     Tulis beberapa teks (A..Q) di koordinat berbeda dalam satu overlay di atas template PDF.
+    - Jika item['from_right'] = True, maka x_final = page_width - x_input (teks tetap rata kiri).
     """
     if not background_pdf_bytes:
         return b""
@@ -208,12 +188,18 @@ def build_pdf_multi(
         y = float(it.get("y", 0))
         size = int(it.get("size", 10))
         bold = bool(it.get("bold", False))
+        from_right = bool(it.get("from_right", False))
+        # Transform X jika patokan dari kanan
+        x_final = (page_w - x) if from_right else x
+
         font = "Helvetica-Bold" if bold else "Helvetica"
         try:
             c.setFont(font, size)
         except Exception:
             c.setFont("Helvetica", 10)
-        c.drawString(x, y, text)
+
+        # Rata kiri (drawString) sesuai permintaan
+        c.drawString(x_final, y, text)
 
     c.showPage()
     c.save()
@@ -248,7 +234,7 @@ with st.expander("Cara pakai (singkat)", expanded=False):
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
         "- **Langkah 2**: Isi **Reimburse** untuk menghasilkan L–Q.\n"
         "- **Langkah 3**: Siapkan **template PDF** (otomatis dari `assets/spj_blank.pdf` atau upload manual).\n"
-        "- **Langkah 4**: Atur **koordinat X/Y** per value (A..Q), pilih **font size**/**bold**.\n"
+        "- **Langkah 4**: A–E,J sudah **fixed** (koordinat & size). K–Q: **X dari kanan** (tulisan rata kiri). Atur di UI.\n"
         "- **Langkah 5**: Klik **Preview** untuk Live View PDF; klik **Download** untuk mengunduh."
     )
 
@@ -277,9 +263,7 @@ if parse_btn:
     if not html_text or not html_text.strip():
         st.error("Silakan tempel atau unggah HTML terlebih dahulu.")
         st.stop()
-
-    data_AK = parse_html_to_A_to_K(html_text)
-    st.session_state.parsed_AK = data_AK
+    st.session_state.parsed_AK = parse_html_to_A_to_K(html_text)
 
 # Tampilkan A–K jika sudah ada
 if st.session_state.parsed_AK:
@@ -299,26 +283,14 @@ if st.session_state.parsed_AK:
         st.write("**I** – (Timeline) By:", data.get("I"))
         st.write("**J** – Daily Allowance (Days):", data.get("J"))
         st.write("**K** – Daily Allowance Total:", data.get("K"))
-
     st.divider()
 
 # ===== Reimburse L–Q =====
 st.subheader("🧾 Reimburse")
-
 with st.form("reimburse_form", clear_on_submit=True):
-    jenis = st.selectbox(
-        "Jenis biaya",
-        options=["bensin", "hotel", "toll", "transportasi", "parkir"],
-        index=0,
-        help="Pilih kategori reimburse",
-    )
-    nominal_text = st.text_input(
-        "Nominal (contoh: 1200000 atau IDR 1.200.000)",
-        value="",
-        help="Masukkan angka saja atau boleh pakai format IDR/berpemisah ribuan",
-    )
+    jenis = st.selectbox("Jenis biaya", options=["bensin", "hotel", "toll", "transportasi", "parkir"], index=0)
+    nominal_text = st.text_input("Nominal (contoh: 1200000 atau IDR 1.200.000)", value="")
     submitted = st.form_submit_button("➕ Tambah", use_container_width=True)
-
     if submitted:
         nominal_val = idr_to_int(nominal_text)
         if nominal_val <= 0:
@@ -331,7 +303,7 @@ with st.form("reimburse_form", clear_on_submit=True):
 # Tabel Reimburse
 st.markdown("### Tabel Reimburse")
 if not st.session_state.reimburse_rows:
-    st.info("Belum ada data reimburse. Tambahkan melalui form di atas.")
+    st.info("Belum ada data reimburse.")
 else:
     header_cols = st.columns([0.7, 3, 3, 2])
     header_cols[0].markdown("**No.**")
@@ -349,7 +321,7 @@ else:
             recompute_totals()
             st.experimental_rerun()
 
-# Total per jenis & map ke L..Q
+# Total L–Q
 recompute_totals()
 totals = st.session_state.totals_LQ
 
@@ -362,29 +334,19 @@ tcols[3].metric("**O – Transportasi**", fmt_idr(totals["O"]))
 tcols[4].metric("**P – Parkir**", fmt_idr(totals["P"]))
 tcols[5].metric("**Q – Total Semua**", fmt_idr(totals["Q"]))
 
-# Gabungkan A–K + L–Q untuk JSON/unduhan
-combined = {
-    **st.session_state.parsed_AK,
-    **{k: totals[k] for k in "LMNOPQ"},
-}
-
+# JSON A–Q
+combined = {**st.session_state.parsed_AK, **{k: totals[k] for k in "LMNOPQ"}}
 st.divider()
 st.subheader("JSON (A–Q)")
 json_str = json.dumps(combined, ensure_ascii=False, indent=2)
 st.code(json_str, language="json")
-st.download_button(
-    label="💾 Unduh JSON (A–Q)",
-    data=json_str,
-    file_name="trip_A_to_Q.json",
-    mime="application/json",
-    use_container_width=True,
-)
+st.download_button("💾 Unduh JSON (A–Q)", data=json_str, file_name="trip_A_to_Q.json", mime="application/json", use_container_width=True)
 
 # =========================
-# PDF Overlay (A–Q) — Koordinat Bebas
+# PDF Overlay (A–Q)
 # =========================
 st.divider()
-st.subheader("📄 PDF Overlay (A–Q) — Koordinat Bebas")
+st.subheader("📄 PDF Overlay (A–Q)")
 
 # Muat template
 DEFAULT_BG_PATH = os.environ.get("SPJ_BG_PATH", "assets/spj_blank.pdf")
@@ -402,52 +364,57 @@ if tpl_up is not None:
     st.session_state.bg_template_bytes = tpl_up.read()
     st.success("Template berhasil dimuat dari upload.")
 
-# Editor nilai & koordinat per key
-st.markdown("#### Nilai (opsional override) & Koordinat")
-
-with st.expander("🔧 Atur Nilai Override (opsional)", expanded=False):
+# ==== Override nilai (opsional) ====
+with st.expander("✏️ Override Nilai (opsional)", expanded=False):
     cols = st.columns(4)
-    keys1 = list("ABCDEFGHIJ")  # A..J
-    keys2 = list("KLMNOPQ")     # K..Q
+    keys1 = list("ABCDEFGHIJ")
+    keys2 = list("KLMNOPQ")
     for i, k in enumerate(keys1):
         with cols[i % 4]:
-            st.session_state.val_overrides[k] = st.text_input(
-                f"{k} (override)", value=st.session_state.val_overrides.get(k, "")
-            )
+            st.session_state.val_overrides[k] = st.text_input(f"{k} (override)", value=st.session_state.val_overrides.get(k, ""))
     st.markdown("---")
     for i, k in enumerate(keys2):
         with cols[i % 4]:
-            st.session_state.val_overrides[k] = st.text_input(
-                f"{k} (override)", value=st.session_state.val_overrides.get(k, "")
-            )
+            st.session_state.val_overrides[k] = st.text_input(f"{k} (override)", value=st.session_state.val_overrides.get(k, ""))
 
-with st.expander("📍 Atur Koordinat X/Y, Size, Bold, Format", expanded=True):
-    # Kelompokkan agar tidak terlalu panjang dalam satu kolom
-    groups = [
-        ("Identitas (A–E, J)", ["A", "B", "C", "D", "E", "J"]),
-        ("Info Lain (F–I, G biasanya jabatan)", ["F", "G", "H", "I"]),
-        ("Nominal (K–Q)", ["K", "L", "M", "N", "O", "P", "Q"]),
-    ]
-    for title, keys in groups:
-        st.markdown(f"**{title}**")
-        gcols = st.columns(6)
-        for k in keys:
-            cs = st.session_state.coord_style.get(k, {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"})
-            with gcols[0]:
-                st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X", value=float(cs["x"]), step=1.0, key=f"x_{k}")
-            with gcols[1]:
-                st.session_state.coord_style[k]["y"] = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
-            with gcols[2]:
-                st.session_state.coord_style[k]["size"] = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
-            with gcols[3]:
-                st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
-            with gcols[4]:
-                st.session_state.coord_style[k]["fmt"] = st.selectbox(
-                    f"{k} · Format", options=["raw", "number", "auto"], index=["raw","number","auto"].index(cs.get("fmt","raw")), key=f"f_{k}"
-                )
-            with gcols[5]:
-                # Tampilkan nilai aktual yang akan dicetak (read-only)
-                st.text_input(f"{k} · Nilai", value=get_value_for_key(k), disabled=True, key=f"v_{k}")
+# ==== Koordinat ====
+with st.expander("📍 Koordinat & Style", expanded=True):
+    # A..E,J: tampil *fixed*, disabled
+    st.markdown("**Identitas (A–E, J) – fixed**")
+    fixed_keys = ["A", "B", "C", "D", "E", "J"]
+    fcols = st.columns(6)
+    for i, k in enumerate(fixed_keys):
+        cs = st.session_state.coord_style[k]
+        with fcols[i]:
+            st.number_input(f"{k} · X", value=float(cs["x"]), step=0.5, disabled=True, key=f"fx_{k}")
+            st.number_input(f"{k} · Y", value=float(cs["y"]), step=0.5, disabled=True, key=f"fy_{k}")
+            st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, disabled=True, key=f"fs_{k}")
+    st.caption("Kordinat & size A–E,J dikunci (tidak bisa diubah). Nilainya tetap bisa dioverride pada panel di atas jika perlu.")
+
+    st.markdown("**Info Lain (F–I) – normal (patokan kiri)**")
+    group_fi = ["F", "G", "H", "I"]
+    gcols = st.columns(4)
+    for i, k in enumerate(group_fi):
+        cs = st.session_state.coord_style[k]
+        with gcols[i]:
+            st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X (dari kiri)", value=float(cs["x"]), step=1.0, key=f"x_{k}")
+            st.session_state.coord_style[k]["y"] = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
+            st.session_state.coord_style[k]["size"] = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
+            st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
+            st.session_state.coord_style[k]["fmt"] = st.selectbox(f"{k} · Format", options=["raw","number","auto"], index=["raw","number","auto"].index(cs.get("fmt","raw")), key=f"f_{k}")
+
+    st.markdown("**Nominal (K–Q) – X dihitung dari kanan (tulisan rata kiri)**")
+    group_kq = ["K", "L", "M", "N", "O", "P", "Q"]
+    # Tampilkan input X sebagai "jarak dari kanan"
+    cols_kq = st.columns(7)
+    for i, k in enumerate(group_kq):
+        cs = st.session_state.coord_style[k]
+        with cols_kq[i]:
+            st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X dari kanan", value=float(cs["x"]), step=1.0, key=f"x_{k}_right")  # disimpan dalam 'x' tapi artinya jarak dari kanan
+            st.session_state.coord_style[k]["y"] = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
+            st.session_state.coord_style[k]["size"] = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
+            st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
+            st.session_state.coord_style[k]["fmt"] = st.selectbox(f"{k} · Format", options=["raw","number","auto"], index=["raw","number","auto"].index(cs.get("fmt","number")), key=f"f_{k}")
 
 # Tombol preview & download
 pcol1, pcol2 = st.columns(2)
@@ -461,18 +428,18 @@ def _items_from_state() -> List[Dict[str, object]]:
     for k, style in st.session_state.coord_style.items():
         x = float(style.get("x", 0))
         y = float(style.get("y", 0))
-        if x == 0 and y == 0:
-            continue  # lewati key yang belum diset koordinatnya
-        txt = get_value_for_key(k)
-        if not str(txt).strip():
+        size = int(style.get("size", 10))
+        bold = bool(style.get("bold", False))
+        from_right = bool(style.get("from_right", False))  # True untuk K..Q
+        # Untuk A..E,J yang fixed, biarpun x/y=0 kita tetap masukkan (karena fixed),
+        # tapi di definisi awal sudah diisi nilai default yang non-zero.
+        if x == 0 and y == 0 and not style.get("locked", False):
+            # skip nilai yang belum diset user
             continue
-        items.append({
-            "text": txt,
-            "x": x,
-            "y": y,
-            "size": int(style.get("size", 10)),
-            "bold": bool(style.get("bold", False)),
-        })
+        txt = get_value_for_key(k).strip()
+        if not txt:
+            continue
+        items.append({"text": txt, "x": x, "y": y, "size": size, "bold": bold, "from_right": from_right})
     return items
 
 # Generate preview
@@ -482,25 +449,21 @@ if do_preview:
     else:
         items = _items_from_state()
         if not items:
-            st.warning("Belum ada koordinat yang diisi. Set minimal satu value (mis. B) lalu Preview.")
+            st.warning("Belum ada koordinat yang diisi. Set minimal satu value lalu Preview.")
         else:
-            st.session_state.preview_pdf = build_pdf_multi(
-                st.session_state.bg_template_bytes, items
-            )
+            st.session_state.preview_pdf = build_pdf_multi(st.session_state.bg_template_bytes, items)
 
 # Tampilkan preview (Chrome-safe)
 if st.session_state.preview_pdf:
     b64 = base64.b64encode(st.session_state.preview_pdf).decode("utf-8")
     html = f"""
     <div style="height: 920px; width: 100%; border: 1px solid #ddd;">
-      <embed
-        src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
-        type="application/pdf"
-        width="100%"
-        height="100%"
-      />
+      <embed type="application/pdf"
+             src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
+             width="100%" height="100%"/>
       <p style="padding:8px;font-family:sans-serif;">
-        Jika PDF tidak tampil, Anda bisa <a download="overlay_A_to_Q.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
+        Jika PDF tidak tampil, Anda bisa
+        <a download="SPJ_overlay_preview.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
       </p>
     </div>
     """
