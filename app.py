@@ -97,9 +97,9 @@ def build_spj_pdf_overlay(
     tune: Optional[Dict[str, Dict[str, float]]] = None,
 ) -> bytes:
     """
-    Overlay nilai A–Q tepat di atas template kosong (1 halaman).
-    - Koordinat sudah disetel agar 'jatuh' 1:1 pada template.
-    - 'tune' = penggeser halus (pt) untuk global & per-bagian bila perlu.
+    Overlay nilai A–Q di atas template kosong (1 halaman).
+    - Hanya menulis NILAI (tanpa label) agar tidak duplikasi dengan label di template.
+    - Koordinat disetel agar jatuh 1:1; fine-tune via 'tune'.
     """
     # Lazy import agar UI tidak crash bila dependency belum terpasang
     try:
@@ -144,6 +144,7 @@ def build_spj_pdf_overlay(
     hari_str = str(inclusive_days(d_dt, e_dt) or "")  # jumlah hari (inklusif)
 
     def fmt_n(n: int) -> str:
+        # 3.840.000
         return f"{n:,}".replace(",", ".")
 
     # ---------- Template wajib ----------
@@ -168,6 +169,8 @@ def build_spj_pdf_overlay(
     c = canvas.Canvas(packet, pagesize=(PAGE_W, PAGE_H))
 
     def draw_text(x, y, text, size=10, bold=False, align="left"):
+        if text is None or text == "":
+            return
         font = "Helvetica-Bold" if bold else "Helvetica"
         c.setFont(font, size)
         if align == "left":
@@ -177,77 +180,57 @@ def build_spj_pdf_overlay(
         elif align == "right":
             c.drawRightString(x, y, text)
 
-    # ========== KOORDINAT 1:1 (disesuaikan untuk template kosong) ==========
-    # Catatan:
-    # - Satuan point; (0,0) = kiri-bawah.
-    # - Jarak antar baris ~18 pt untuk blok-bok bernomor.
-    # - Kolom angka kanan dibuat align="right" agar digit rata kanan.
-
-    # ---- IDENTITAS (nilai setelah titik-dua) ----
+    # ========== KOORDINAT (nilai saja, tanpa label) ==========
+    # —— IDENTITAS (nilai setelah ':') ——
     dx, dy = _off("ident")
-    XVAL_IDENT = 228  # kolom nilai identitas setelah ':'
-    draw_text(XVAL_IDENT + dx, PAGE_H - 136 + dy, A, size=10)      # ATAS NAMA  (*A)
-    draw_text(XVAL_IDENT + dx, PAGE_H - 154 + dy, B, size=10)      # TEMPAT ASAL (*B)
-    draw_text(XVAL_IDENT + dx, PAGE_H - 172 + dy, C, size=10)      # TUJUAN      (*C)
-    draw_text(XVAL_IDENT + dx, PAGE_H - 190 + dy, D, size=10)      # TGL BERANGKAT (*D)
-    draw_text(XVAL_IDENT + dx, PAGE_H - 208 + dy, E, size=10)      # TGL KEMBALI   (*E)
-    draw_text(XVAL_IDENT + dx, PAGE_H - 226 + dy, hari_str, size=10)  # JUMLAH HARI
+    XVAL_IDENT = 228
+    draw_text(XVAL_IDENT + dx, PAGE_H - 136 + dy, A, size=10)      # ATAS NAMA
+    draw_text(XVAL_IDENT + dx, PAGE_H - 154 + dy, B, size=10)      # TEMPAT ASAL
+    draw_text(XVAL_IDENT + dx, PAGE_H - 172 + dy, C, size=10)      # TUJUAN
+    draw_text(XVAL_IDENT + dx, PAGE_H - 190 + dy, D, size=10)      # TGL BERANGKAT
+    draw_text(XVAL_IDENT + dx, PAGE_H - 208 + dy, E, size=10)      # TGL KEMBALI
+    draw_text(XVAL_IDENT + dx, PAGE_H - 226 + dy, hari_str, size=10)  # JUMLAH HARI (kata "Hari" ada di template)
 
-    # ---- A. REALISASI BIAYA HARIAN ----
+    # —— A. HARIAN ——
     dx, dy = _off("A")
-    draw_text(145 + dx, PAGE_H - 320 + dy, fmt_n(K_val), size=10)     # Rp. <K>
-    draw_text(245 + dx, PAGE_H - 320 + dy, "REALISASI HARI", size=10)
-    draw_text(92  + dx, PAGE_H - 338 + dy, hari_str, size=10)         # <hari>
-    draw_text(112 + dx, PAGE_H - 338 + dy, "Hari", size=10)
-    draw_text(40  + dx, PAGE_H - 356 + dy, "SELISIH KURANG (kembali ke karyawan)", size=10)
-    draw_text(145 + dx, PAGE_H - 374 + dy, fmt_n(K_val), size=10)     # <K>
-    draw_text(220 + dx, PAGE_H - 374 + dy, "(AKOMODASI DITANGGUNG PANITIA)", size=10)
-    draw_text(40  + dx, PAGE_H - 392 + dy, "SELISIH TAMBAH (kembali ke perusahaan)", size=10)
-    draw_text(145 + dx, PAGE_H - 410 + dy, "-", size=10)
+    # Nilai K (di baris REALISASI HARI)
+    draw_text(145 + dx, PAGE_H - 320 + dy, fmt_n(K_val), size=10)
+    # Jumlah hari
+    draw_text(92  + dx, PAGE_H - 338 + dy, hari_str, size=10)
+    # Selisih kurang = K
+    draw_text(145 + dx, PAGE_H - 374 + dy, fmt_n(K_val), size=10)
+    # Selisih tambah (kosong) → biarkan kosong (template sudah punya 'Rp.')
 
-    # ---- B. FASILITAS TRANSPORTASI (PESAWAT) ----
-    dx, dy = _off("B")
-    draw_text(145 + dx, PAGE_H - 444 + dy, "Rp.", size=10)
-    draw_text(40  + dx, PAGE_H - 462 + dy, "REALISASI", size=10)
-    draw_text(145 + dx, PAGE_H - 480 + dy, "-", size=10)
-    draw_text(40  + dx, PAGE_H - 498 + dy, "SELISIH KURANG (kembali ke karyawan)", size=10)
-    draw_text(145 + dx, PAGE_H - 516 + dy, "-", size=10)
-    draw_text(40  + dx, PAGE_H - 534 + dy, "SELISIH TAMBAH (kembali ke perusahaan)", size=10)
-    draw_text(145 + dx, PAGE_H - 552 + dy, "-", size=10)
+    # —— B. PESAWAT ——
+    # Kosong → tidak ditulis
 
-    # ---- C. REALISASI BIAYA PENGINAPAN ----
-    dx, dy = _off("C")
-    draw_text(145 + dx, PAGE_H - 586 + dy, "Rp.", size=10)
-    draw_text(40  + dx, PAGE_H - 604 + dy, "REALISASI", size=10)
-    draw_text(145 + dx, PAGE_H - 622 + dy, "-", size=10)
-    draw_text(178 + dx, PAGE_H - 622 + dy, "(CTM)", size=10)
-    draw_text(40  + dx, PAGE_H - 640 + dy, "SELISIH KURANG (kembali ke karyawan)", size=10)
-    draw_text(145 + dx, PAGE_H - 658 + dy, "-", size=10)
-    draw_text(40  + dx, PAGE_H - 676 + dy, "SELISIH TAMBAH (kembali ke perusahaan)", size=10)
-    draw_text(145 + dx, PAGE_H - 694 + dy, "-", size=10)
+    # —— C. PENGINAPAN ——
+    # Kosong → tidak ditulis
 
-    # ---- D. JENIS BIAYA LAIN-LAIN ----
+    # —— D. LAIN-LAIN (kolom angka kanan rata-kanan) ——
     dx, dy = _off("D")
-    XNUM_R = 325  # kolom angka kanan (rata kanan)
-    draw_text(XNUM_R + dx, PAGE_H - 728 + dy, fmt_n(L_val), size=10, align="right")  # *L bensin
-    draw_text(XNUM_R + dx, PAGE_H - 746 + dy, fmt_n(M_val), size=10, align="right")  # *M hotel
-    draw_text(XNUM_R + dx, PAGE_H - 764 + dy, fmt_n(N_val), size=10, align="right")  # *N toll
-    draw_text(XNUM_R + dx, PAGE_H - 782 + dy, fmt_n(O_val), size=10, align="right")  # *O transportasi
-    draw_text(XNUM_R + dx, PAGE_H - 800 + dy, fmt_n(P_val), size=10, align="right")  # *P parkir
-    draw_text(40      + dx, PAGE_H - 818 + dy, fmt_n(Q_val), size=10)                # *Q selisih kurang total
+    XNUM_R = 330  # kolom angka kanan (rapat ke tepi kanan kolom)
+    if L_val: draw_text(XNUM_R + dx, PAGE_H - 728 + dy, fmt_n(L_val), size=10, align="right")
+    if M_val: draw_text(XNUM_R + dx, PAGE_H - 746 + dy, fmt_n(M_val), size=10, align="right")
+    if N_val: draw_text(XNUM_R + dx, PAGE_H - 764 + dy, fmt_n(N_val), size=10, align="right")
+    if O_val: draw_text(XNUM_R + dx, PAGE_H - 782 + dy, fmt_n(O_val), size=10, align="right")
+    if P_val: draw_text(XNUM_R + dx, PAGE_H - 800 + dy, fmt_n(P_val), size=10, align="right")
+    # Selisih kurang total (di kiri bawah daftar)
+    if Q_val: draw_text(40 + dx, PAGE_H - 818 + dy, fmt_n(Q_val), size=10)
 
-    # ---- RINGKASAN (I / II / TOTAL) ----
+    # —— RINGKASAN I / II / TOTAL (kanan) ——
     dx, dy = _off("SUM")
-    draw_text(120 + dx, PAGE_H - 848 + dy, fmt_n(Q_val), size=10, bold=True)  # I. TOTAL SELISIH KURANG
-    draw_text(120 + dx, PAGE_H - 880 + dy, "-",          size=10, bold=True)  # II. TOTAL SELISIH TAMBAH
-    draw_text(120 + dx, PAGE_H - 912 + dy, fmt_n(Q_val), size=10, bold=True)  # TOTAL SELISIH
+    if Q_val:
+        draw_text(120 + dx, PAGE_H - 848 + dy, fmt_n(Q_val), size=10, bold=True)  # I. TOTAL SELISIH KURANG
+        draw_text(120 + dx, PAGE_H - 912 + dy, fmt_n(Q_val), size=10, bold=True)  # TOTAL SELISIH
+    # II. TOTAL SELISIH TAMBAH = '-' → tidak ditulis
 
-    # ---- Mengetahui / TTD ----
+    # —— Mengetahui / TTD ——
     dx, dy = _off("TTD")
-    draw_text(40  + dx, PAGE_H - 948 + dy, (H if H else I), size=10, bold=True)  # kiri: pejabat
-    draw_text(300 + dx, PAGE_H - 948 + dy, A,             size=10, bold=True)    # kanan: pelaksana
-    draw_text(40  + dx, PAGE_H - 972 + dy, D, size=10)                            # tanggal berangkat
-    draw_text(180 + dx, PAGE_H - 972 + dy, E, size=10)                            # tanggal kembali
+    draw_text(40  + dx, PAGE_H - 948 + dy, (H if H else I), size=10, bold=True)  # kiri
+    draw_text(300 + dx, PAGE_H - 948 + dy, A,             size=10, bold=True)    # kanan
+    draw_text(40  + dx, PAGE_H - 972 + dy, D, size=10)                            # tanggal mulai
+    draw_text(180 + dx, PAGE_H - 972 + dy, E, size=10)                            # tanggal akhir
     if G:
         draw_text(40 + dx, PAGE_H - 990 + dy, G, size=10)                         # jabatan (opsional)
 
@@ -465,7 +448,7 @@ with st.expander("Buka kalibrasi", expanded=False):
         sum_dy   = st.number_input("Ringkasan (I/II/TOTAL) dy", value=0.0, step=1.0, key="cal_SUM_dy")
         ttd_dy   = st.number_input("TTD dy", value=0.0, step=1.0, key="cal_TTD_dy")
 
-    st.caption("Tip: coba mulai Global dy = +2 atau −2. Jika semua naik/turun bersama, berarti offset global sudah tepat.")
+    st.caption("Tip: coba mulai Global dy = +2 atau −2. Jika semua naik/turun, berarti offset global sudah tepat.")
 
     st.session_state["tune_dict"] = {
         "global": {"dx": g_dx, "dy": g_dy},
