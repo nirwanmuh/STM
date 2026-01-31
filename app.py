@@ -2,14 +2,17 @@ import json
 import os
 import io
 import base64
-from typing import List, Dict
+from typing import List, Dict, Optional
+
 import streamlit as st
 import streamlit.components.v1 as components
 
 from src.parser import parse_html_to_A_to_K
 
 
-# -------------------- Helpers --------------------
+# =========================
+# Helpers
+# =========================
 def idr_to_int(s: str) -> int:
     """
     Konversi teks nominal menjadi integer rupiah.
@@ -23,27 +26,56 @@ def idr_to_int(s: str) -> int:
 
 
 def fmt_idr(n: int) -> str:
-    # Format ribuan gaya Indonesia: titik sebagai pemisah ribuan
+    """Format ribuan gaya Indonesia: titik pemisah ribuan, prefix IDR."""
     s = f"{n:,}".replace(",", ".")
     return f"IDR {s}"
+
+
+def fmt_n(n: int) -> str:
+    """Format angka (tanpa prefix), contoh 3840000 -> '3.840.000'."""
+    return f"{n:,}".replace(",", ".")
 
 
 def ensure_states():
     if "parsed_AK" not in st.session_state:
         st.session_state.parsed_AK: Dict[str, str | None] = {}
     if "reimburse_rows" not in st.session_state:
-        # list of dict: {"jenis": "bensin", "nominal": 1200000}
         st.session_state.reimburse_rows: List[Dict] = []
     if "totals_LQ" not in st.session_state:
-        # Letters L..Q
         st.session_state.totals_LQ: Dict[str, int] = {k: 0 for k in list("LMNOPQ")}
-    # State untuk fitur A-only PDF
-    if "bg_template_bytes_A" not in st.session_state:
-        st.session_state.bg_template_bytes_A = None
-    if "preview_A_pdf" not in st.session_state:
-        st.session_state.preview_A_pdf = None
-    if "val_A_override" not in st.session_state:
-        st.session_state.val_A_override = ""
+    # PDF: template & preview
+    if "bg_template_bytes" not in st.session_state:
+        st.session_state.bg_template_bytes: Optional[bytes] = None
+    if "preview_pdf" not in st.session_state:
+        st.session_state.preview_pdf: Optional[bytes] = None
+    # Nilai override (opsional)
+    if "val_overrides" not in st.session_state:
+        st.session_state.val_overrides: Dict[str, str] = {}
+    # Koordinat & style per value (A..Q)
+    if "coord_style" not in st.session_state:
+        # Nilai default koordinat:
+        # A diminta default x=190pt, y=666pt; yang lain bisa diset via UI.
+        st.session_state.coord_style = {
+            # key: {"x": float, "y": float, "size": int, "bold": bool, "fmt": str}
+            # fmt: "auto" | "raw" | "number"
+            "A": {"x": 190.0, "y": 666.0, "size": 10, "bold": False, "fmt": "raw"},
+            "B": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
+            "C": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
+            "D": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
+            "E": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
+            "F": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
+            "G": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
+            "H": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
+            "I": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},
+            "J": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"},  # days
+            "K": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
+            "L": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
+            "M": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
+            "N": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
+            "O": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
+            "P": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
+            "Q": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number"},
+        }
 
 
 def recompute_totals():
@@ -73,37 +105,88 @@ def recompute_totals():
     st.session_state.totals_LQ = LQ
 
 
+def get_value_for_key(key: str) -> str:
+    """
+    Ambil nilai final untuk key A..Q:
+      - cek override (jika user isi manual),
+      - jika tidak ada, ambil dari parsed_AK (A..K),
+      - untuk L..Q ambil dari totals_LQ,
+      - lakukan formatting sesuai 'fmt'.
+    """
+    # Override manual dari user?
+    ov = st.session_state.val_overrides.get(key)
+    if ov not in (None, ""):
+        return str(ov)
+
+    # Data A..K dari parse
+    ak = st.session_state.parsed_AK or {}
+    lq = st.session_state.totals_LQ or {}
+
+    # Default text (raw) berdasarkan sumber
+    if key in list("ABCDEFGHIJK"):
+        raw = ak.get(key)
+        # Untuk J (days) kadang text "3" atau "3 Day". Kita ambil digitnya saja.
+        if key == "J" and raw:
+            digits = "".join(ch for ch in str(raw) if ch.isdigit())
+            raw = digits or raw
+    elif key in list("LMNOPQ"):
+        raw = lq.get(key, 0)
+    else:
+        raw = ""
+
+    # Formatting sesuai setting
+    style = st.session_state.coord_style.get(key, {})
+    fmt_mode = style.get("fmt", "raw")
+
+    if fmt_mode == "number":
+        try:
+            # Raw bisa berupa "IDR 1.200.000" atau int → normalkan dulu
+            val = raw
+            if isinstance(val, str):
+                val = idr_to_int(val)
+            if isinstance(val, (int, float)):
+                return fmt_n(int(val))
+            return str(raw or "")
+        except Exception:
+            return str(raw or "")
+
+    elif fmt_mode == "raw":
+        return str(raw or "")
+
+    # "auto": kalau angka → number, kalau bukan → raw
+    try:
+        if isinstance(raw, (int, float)):
+            return fmt_n(int(raw))
+        # string angka?
+        test = idr_to_int(str(raw))
+        if test > 0:
+            return fmt_n(test)
+    except Exception:
+        pass
+    return str(raw or "")
+
+
 # =========================
-# PDF Builder: Overlay A saja (koordinat bebas)
+# PDF Builder: Multi (A–Q)
 # =========================
-def build_pdf_A_only(
+def build_pdf_multi(
     background_pdf_bytes: bytes,
-    text_A: str,
-    x: float,
-    y: float,
-    font_size: int = 10,
-    bold: bool = False,
+    items: List[Dict[str, object]],  # [{ "text": str, "x": float, "y": float, "size": int, "bold": bool }, ...]
 ) -> bytes:
     """
-    Tulis hanya value A di koordinat (x, y) di atas template PDF 1 halaman.
-    (0,0) = kiri-bawah; satuan point.
+    Tulis beberapa teks (A..Q) di koordinat berbeda dalam satu overlay di atas template PDF.
     """
     if not background_pdf_bytes:
         return b""
 
-    # Lazy import supaya app tidak crash jika dep belum terpasang
     try:
         from reportlab.pdfgen import canvas
-    except Exception as e:
-        st.error("Package `reportlab` belum terpasang. Tambahkan ke requirements.txt. Detail: " + str(e))
-        return b""
-    try:
         from PyPDF2 import PdfReader, PdfWriter
     except Exception as e:
-        st.error("Package `PyPDF2` belum terpasang. Tambahkan ke requirements.txt. Detail: " + str(e))
+        st.error(f"Dependency PDF belum terpasang: {e}")
         return b""
 
-    # Baca ukuran halaman dari template (halaman pertama)
+    # Baca ukuran halaman template
     try:
         base_reader = PdfReader(io.BytesIO(background_pdf_bytes))
         base_page = base_reader.pages[0]
@@ -113,55 +196,63 @@ def build_pdf_A_only(
         st.error(f"Gagal membaca template PDF: {e}")
         return b""
 
-    # Buat overlay transparan
+    # Overlay
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(page_w, page_h))
 
-    font_name = "Helvetica-Bold" if bold else "Helvetica"
-    try:
-        c.setFont(font_name, float(font_size))
-    except Exception:
-        c.setFont("Helvetica", 10)
-
-    # Tulis nilai A di titik (x, y)
-    if text_A:
-        c.drawString(float(x), float(y), str(text_A))
+    for it in items:
+        text = str(it.get("text") or "").strip()
+        if not text:
+            continue
+        x = float(it.get("x", 0))
+        y = float(it.get("y", 0))
+        size = int(it.get("size", 10))
+        bold = bool(it.get("bold", False))
+        font = "Helvetica-Bold" if bold else "Helvetica"
+        try:
+            c.setFont(font, size)
+        except Exception:
+            c.setFont("Helvetica", 10)
+        c.drawString(x, y, text)
 
     c.showPage()
     c.save()
     overlay_pdf = buf.getvalue()
 
-    # Merge overlay ke background
+    # Merge
     try:
         overlay_reader = PdfReader(io.BytesIO(overlay_pdf))
         overlay_page = overlay_reader.pages[0]
         base_page.merge_page(overlay_page)
-
         writer = PdfWriter()
         writer.add_page(base_page)
         out_buf = io.BytesIO()
         writer.write(out_buf)
         return out_buf.getvalue()
     except Exception as e:
-        st.error(f"Gagal menggabungkan overlay ke template: {e}")
+        st.error(f"Gagal merge overlay: {e}")
         return overlay_pdf
 
 
-# -------------------- UI --------------------
-st.set_page_config(page_title="Trip HTML Parser (A–Q)", page_icon="🧭", layout="wide")
+# =========================
+# UI
+# =========================
+st.set_page_config(page_title="Trip HTML Parser (A–Q) + PDF Overlay", page_icon="🧭", layout="wide")
 ensure_states()
 
 st.title("🧭 Trip HTML Parser (A–Q)")
-st.caption("Tempel/unggah HTML Trip Detail → Ekstrak A–K → Input Reimburse → Simpan L–Q.")
+st.caption("Tempel/unggah HTML Trip Detail → Ekstrak A–K → Input Reimburse → Simpan L–Q → PDF Overlay (A–Q).")
 
-with st.expander("Cara pakai", expanded=False):
+with st.expander("Cara pakai (singkat)", expanded=False):
     st.markdown(
-        "- **Langkah 1**: Tempel atau unggah HTML, lalu klik **Parse HTML** untuk mendapatkan A–K.\n"
-        "- **Langkah 2**: Di bagian **Reimburse**, pilih jenis biaya dan masukkan nominal, klik **Tambah**.\n"
-        "- **Langkah 3**: Lihat tabel, hapus baris jika perlu. Total otomatis tersimpan ke **L–Q**.\n"
-        "- **Langkah 4**: Unduh JSON bila diperlukan."
+        "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
+        "- **Langkah 2**: Isi **Reimburse** untuk menghasilkan L–Q.\n"
+        "- **Langkah 3**: Siapkan **template PDF** (otomatis dari `assets/spj_blank.pdf` atau upload manual).\n"
+        "- **Langkah 4**: Atur **koordinat X/Y** per value (A..Q), pilih **font size**/**bold**.\n"
+        "- **Langkah 5**: Klik **Preview** untuk Live View PDF; klik **Download** untuk mengunduh."
     )
 
+# ===== Input HTML =====
 tab1, tab2 = st.tabs(["📄 Tempel HTML", "📤 Unggah File HTML"])
 html_text = ""
 
@@ -181,7 +272,7 @@ with tab2:
 
 parse_btn = st.button("🔎 Parse HTML", type="primary", use_container_width=True)
 
-# -------------------- Parse A–K --------------------
+# ===== Parse A–K =====
 if parse_btn:
     if not html_text or not html_text.strip():
         st.error("Silakan tempel atau unggah HTML terlebih dahulu.")
@@ -211,10 +302,9 @@ if st.session_state.parsed_AK:
 
     st.divider()
 
-# -------------------- Reimburse Section (L–Q) --------------------
+# ===== Reimburse L–Q =====
 st.subheader("🧾 Reimburse")
 
-# Form input
 with st.form("reimburse_form", clear_on_submit=True):
     jenis = st.selectbox(
         "Jenis biaya",
@@ -243,7 +333,6 @@ st.markdown("### Tabel Reimburse")
 if not st.session_state.reimburse_rows:
     st.info("Belum ada data reimburse. Tambahkan melalui form di atas.")
 else:
-    # Render baris manual agar ada tombol Hapus per baris
     header_cols = st.columns([0.7, 3, 3, 2])
     header_cols[0].markdown("**No.**")
     header_cols[1].markdown("**Jenis**")
@@ -256,7 +345,6 @@ else:
         c2.write(row["jenis"].capitalize())
         c3.write(fmt_idr(int(row["nominal"])))
         if c4.button("Hapus", key=f"del_{idx}", use_container_width=True):
-            # Hapus entry dan hitung ulang
             del st.session_state.reimburse_rows[idx - 1]
             recompute_totals()
             st.experimental_rerun()
@@ -284,7 +372,6 @@ st.divider()
 st.subheader("JSON (A–Q)")
 json_str = json.dumps(combined, ensure_ascii=False, indent=2)
 st.code(json_str, language="json")
-
 st.download_button(
     label="💾 Unduh JSON (A–Q)",
     data=json_str,
@@ -294,73 +381,118 @@ st.download_button(
 )
 
 # =========================
-# ✍️ Tempatkan value A ke PDF (koordinat bebas)
+# PDF Overlay (A–Q) — Koordinat Bebas
 # =========================
 st.divider()
-st.subheader("✍️ Tempatkan value **A** ke PDF (koordinat bebas)")
+st.subheader("📄 PDF Overlay (A–Q) — Koordinat Bebas")
 
-# Pastikan template tersedia
+# Muat template
 DEFAULT_BG_PATH = os.environ.get("SPJ_BG_PATH", "assets/spj_blank.pdf")
-
-# Coba muat otomatis dari repo (sekali saja)
-if not st.session_state.bg_template_bytes_A:
+if not st.session_state.bg_template_bytes:
     try:
         if os.path.exists(DEFAULT_BG_PATH):
             with open(DEFAULT_BG_PATH, "rb") as f:
-                st.session_state.bg_template_bytes_A = f.read()
-            st.info(f"Template PDF dimuat dari: {DEFAULT_BG_PATH}")
+                st.session_state.bg_template_bytes = f.read()
+            st.info(f"Template background di-load dari: {DEFAULT_BG_PATH}")
     except Exception as e:
         st.warning(f"Tidak bisa membaca {DEFAULT_BG_PATH}: {e}")
 
-# Atau upload manual
-tpl_file_A = st.file_uploader("(Opsional) Unggah template PDF untuk penempatan A", type=["pdf"], key="tpl_for_A")
-if tpl_file_A is not None:
-    st.session_state.bg_template_bytes_A = tpl_file_A.read()
-    st.success("Template untuk penempatan A berhasil dimuat dari upload.")
+tpl_up = st.file_uploader("Atau upload template PDF (1 halaman)", type=["pdf"])
+if tpl_up is not None:
+    st.session_state.bg_template_bytes = tpl_up.read()
+    st.success("Template berhasil dimuat dari upload.")
 
-# Ambil value A dari hasil parse (jika ada)
-value_A_default = st.session_state.parsed_AK.get("A") if st.session_state.parsed_AK else ""
-st.session_state.val_A_override = st.text_input(
-    "Nilai A (Employee Name)",
-    value=value_A_default or st.session_state.val_A_override or "",
-    help="Bisa diedit jika perlu"
-)
+# Editor nilai & koordinat per key
+st.markdown("#### Nilai (opsional override) & Koordinat")
 
-colA1, colA2, colA3, colA4 = st.columns(4)
-with colA1:
-    x_A = st.number_input("Koordinat X (pt; 0=tepi kiri)", value=228.0, step=1.0)
-with colA2:
-    y_A = st.number_input("Koordinat Y (pt; 0=tepi bawah)", value=700.0, step=1.0)
-with colA3:
-    size_A = st.number_input("Ukuran font", value=10, step=1, min_value=6, max_value=72)
-with colA4:
-    bold_A = st.checkbox("Bold", value=False)
+with st.expander("🔧 Atur Nilai Override (opsional)", expanded=False):
+    cols = st.columns(4)
+    keys1 = list("ABCDEFGHIJ")  # A..J
+    keys2 = list("KLMNOPQ")     # K..Q
+    for i, k in enumerate(keys1):
+        with cols[i % 4]:
+            st.session_state.val_overrides[k] = st.text_input(
+                f"{k} (override)", value=st.session_state.val_overrides.get(k, "")
+            )
+    st.markdown("---")
+    for i, k in enumerate(keys2):
+        with cols[i % 4]:
+            st.session_state.val_overrides[k] = st.text_input(
+                f"{k} (override)", value=st.session_state.val_overrides.get(k, "")
+            )
 
-colB1, colB2 = st.columns([1, 1])
-with colB1:
-    do_preview_A = st.button("🔁 Preview A di PDF", use_container_width=True)
-with colB2:
-    do_download_A = st.button("⬇️ Unduh PDF (A saja)", use_container_width=True)
+with st.expander("📍 Atur Koordinat X/Y, Size, Bold, Format", expanded=True):
+    # Kelompokkan agar tidak terlalu panjang dalam satu kolom
+    groups = [
+        ("Identitas (A–E, J)", ["A", "B", "C", "D", "E", "J"]),
+        ("Info Lain (F–I, G biasanya jabatan)", ["F", "G", "H", "I"]),
+        ("Nominal (K–Q)", ["K", "L", "M", "N", "O", "P", "Q"]),
+    ]
+    for title, keys in groups:
+        st.markdown(f"**{title}**")
+        gcols = st.columns(6)
+        for k in keys:
+            cs = st.session_state.coord_style.get(k, {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw"})
+            with gcols[0]:
+                st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X", value=float(cs["x"]), step=1.0, key=f"x_{k}")
+            with gcols[1]:
+                st.session_state.coord_style[k]["y"] = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
+            with gcols[2]:
+                st.session_state.coord_style[k]["size"] = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
+            with gcols[3]:
+                st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
+            with gcols[4]:
+                st.session_state.coord_style[k]["fmt"] = st.selectbox(
+                    f"{k} · Format", options=["raw", "number", "auto"], index=["raw","number","auto"].index(cs.get("fmt","raw")), key=f"f_{k}"
+                )
+            with gcols[5]:
+                # Tampilkan nilai aktual yang akan dicetak (read-only)
+                st.text_input(f"{k} · Nilai", value=get_value_for_key(k), disabled=True, key=f"v_{k}")
 
-# Render preview
-if do_preview_A:
-    if not st.session_state.bg_template_bytes_A:
+# Tombol preview & download
+pcol1, pcol2 = st.columns(2)
+with pcol1:
+    do_preview = st.button("🔁 Preview PDF (A–Q)", use_container_width=True)
+with pcol2:
+    do_download = st.button("⬇️ Download PDF (A–Q)", use_container_width=True)
+
+def _items_from_state() -> List[Dict[str, object]]:
+    items: List[Dict[str, object]] = []
+    for k, style in st.session_state.coord_style.items():
+        x = float(style.get("x", 0))
+        y = float(style.get("y", 0))
+        if x == 0 and y == 0:
+            continue  # lewati key yang belum diset koordinatnya
+        txt = get_value_for_key(k)
+        if not str(txt).strip():
+            continue
+        items.append({
+            "text": txt,
+            "x": x,
+            "y": y,
+            "size": int(style.get("size", 10)),
+            "bold": bool(style.get("bold", False)),
+        })
+    return items
+
+# Generate preview
+if do_preview:
+    if not st.session_state.bg_template_bytes:
         st.warning("Template PDF belum tersedia. Upload file atau letakkan di assets/spj_blank.pdf.")
     else:
-        pdf_bytes_A = build_pdf_A_only(
-            background_pdf_bytes=st.session_state.bg_template_bytes_A,
-            text_A=st.session_state.get("val_A_override") or "",
-            x=x_A, y=y_A,
-            font_size=size_A,
-            bold=bold_A,
-        )
-        st.session_state.preview_A_pdf = pdf_bytes_A
+        items = _items_from_state()
+        if not items:
+            st.warning("Belum ada koordinat yang diisi. Set minimal satu value (mis. B) lalu Preview.")
+        else:
+            st.session_state.preview_pdf = build_pdf_multi(
+                st.session_state.bg_template_bytes, items
+            )
 
-# Tampilkan preview jika ada (Chrome-safe, gunakan <embed> dengan data: base64)
-if st.session_state.preview_A_pdf:
-    b64 = base64.b64encode(st.session_state.preview_A_pdf).decode("utf-8")
+# Tampilkan preview (Chrome-safe)
+if st.session_state.preview_pdf:
+    b64 = base64.b64encode(st.session_state.preview_pdf).decode("utf-8")
     html = f"""
-    <div style="height: 900px; width: 100%; border: 1px solid #ddd;">
+    <div style="height: 920px; width: 100%; border: 1px solid #ddd;">
       <embed
         src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
         type="application/pdf"
@@ -368,31 +500,28 @@ if st.session_state.preview_A_pdf:
         height="100%"
       />
       <p style="padding:8px;font-family:sans-serif;">
-        Jika PDF tidak tampil, Anda tetap bisa
-        <a download="SPJ_A_only.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
+        Jika PDF tidak tampil, Anda bisa <a download="overlay_A_to_Q.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
       </p>
     </div>
     """
-    components.html(html, height=920, scrolling=True)
+    components.html(html, height=940, scrolling=True)
 else:
-    st.info("Preview belum tersedia. Klik **🔁 Preview A di PDF** setelah mengatur koordinat.")
+    st.info("Preview belum tersedia. Klik **🔁 Preview PDF (A–Q)** setelah mengatur koordinat.")
 
-# Tombol unduh
-if do_download_A:
-    if not st.session_state.bg_template_bytes_A:
+# Download
+if do_download:
+    if not st.session_state.bg_template_bytes:
         st.warning("Template PDF belum tersedia. Upload file atau letakkan di assets/spj_blank.pdf.")
     else:
-        pdf_bytes_A = build_pdf_A_only(
-            background_pdf_bytes=st.session_state.bg_template_bytes_A,
-            text_A=st.session_state.get("val_A_override") or "",
-            x=x_A, y=y_A,
-            font_size=size_A,
-            bold=bold_A,
-        )
-        st.download_button(
-            "⬇️ Klik untuk menyimpan PDF (A)",
-            data=pdf_bytes_A,
-            file_name="SPJ_A_only.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
+        items = _items_from_state()
+        if not items:
+            st.warning("Belum ada koordinat yang diisi.")
+        else:
+            pdf_bytes = build_pdf_multi(st.session_state.bg_template_bytes, items)
+            st.download_button(
+                "⬇️ Klik untuk mengunduh PDF (A–Q)",
+                data=pdf_bytes,
+                file_name="SPJ_A_to_Q_overlay.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
