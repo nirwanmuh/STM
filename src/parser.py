@@ -1,25 +1,30 @@
 import re
 from bs4 import BeautifulSoup, NavigableString, Tag
+from typing import Optional, Tuple, Dict
 
-def _clean(txt: str | None) -> str | None:
+# ---------- Utilities ----------
+def _clean(txt: Optional[str]) -> Optional[str]:
     if txt is None:
         return None
-    # Hilangkan spasi ganda & whitespace ringan
     return " ".join(txt.replace("\xa0", " ").split()).strip() or None
 
-def _text_after_label(soup: BeautifulSoup, label: str) -> str | None:
+def _text_after_label(soup: BeautifulSoup, label: str) -> Optional[str]:
     """
-    Cari <span> dengan teks 'label' lalu ambil teks setelahnya (biasanya text node setelah <br>).
+    Cari <span> berisi 'label' (mis. 'Depart Date'), lalu ambil teks setelah <br>.
     """
-    span = soup.find("span", string=re.compile(rf"^{re.escape(label)}\b", re.I))
+    # Jangan pakai string=regex karena node sering punya anak; pakai lambda match di tag <span>.
+    span = None
+    for sp in soup.find_all("span"):
+        if sp.get_text(strip=True).lower().startswith(label.lower()):
+            span = sp
+            break
     if not span:
         return None
 
     node = span.next_sibling
-    # Lewati <br/> atau whitespace
     while node and (
-        (isinstance(node, NavigableString) and not str(node).strip())
-        or (isinstance(node, Tag) and node.name == "br")
+        (isinstance(node, NavigableString) and not str(node).strip()) or
+        (isinstance(node, Tag) and node.name == "br")
     ):
         node = node.next_sibling
 
@@ -28,59 +33,64 @@ def _text_after_label(soup: BeautifulSoup, label: str) -> str | None:
 
     if isinstance(node, NavigableString):
         return _clean(str(node))
-    elif isinstance(node, Tag):
-        return _clean(node.get_text(separator=" ", strip=True))
+    if isinstance(node, Tag):
+        return _clean(node.get_text(" ", strip=True))
     return None
 
-def _h5_suffix_value(soup: BeautifulSoup, prefix: str) -> str | None:
+def _h5_suffix_value(soup: BeautifulSoup, prefix: str) -> Optional[str]:
     """
-    Ambil nilai dari <h5> yang formatnya seperti 'Trip From : Jakarta'
+    Ambil nilai dari <h5> yang format tampilannya seperti 'Trip From : Jakarta'
+    CATATAN: <h5> berisi <i> ikon, jadi harus pakai get_text() bukan string=...
     """
-    h5 = soup.find("h5", string=re.compile(rf"^{re.escape(prefix)}\s*:\s*", re.I))
-    if not h5:
-        return None
-    # Ambil bagian setelah titik dua
-    m = re.search(r":\s*(.+)$", h5.get_text(" ", strip=True))
-    return _clean(m.group(1)) if m else None
-
-def _employee_name_from_top_right(soup: BeautifulSoup) -> str | None:
-    h4 = soup.find("h4", string=re.compile(r"Employee Name", re.I))
-    if not h4:
-        # fallback: cari <span key="t-dt-employee-name">…</span> : Nama
-        span = soup.find("span", attrs={"key": "t-dt-employee-name"})
-        if span and span.parent and span.parent.name == "h4":
-            text = span.parent.get_text(" ", strip=True)
+    for h5 in soup.find_all("h5"):
+        text = h5.get_text(" ", strip=True)
+        if re.match(rf"^{re.escape(prefix)}\s*:", text, flags=re.I):
             m = re.search(r":\s*(.+)$", text)
-            return _clean(m.group(1)) if m else None
-        return None
-    text = h4.get_text(" ", strip=True)
-    m = re.search(r":\s*(.+)$", text)
-    return _clean(m.group(1)) if m else None
+            if m:
+                return _clean(m.group(1))
+    return None
 
-def _purpose_from_first_table(soup: BeautifulSoup) -> str | None:
+def _employee_name_from_top_right(soup: BeautifulSoup) -> Optional[str]:
+    # Pola umum: <h4><span>Employee Name</span> : Nama</h4>
+    # Cari semua h4 lalu periksa teksnya
+    for h4 in soup.find_all("h4"):
+        t = h4.get_text(" ", strip=True)
+        if re.search(r"\bEmployee Name\b", t, flags=re.I):
+            m = re.search(r":\s*(.+)$", t)
+            if m:
+                return _clean(m.group(1))
+    # Fallback (semestinya tidak kepakai, tapi aman):
+    span = soup.find("span", attrs={"key": "t-dt-employee-name"})
+    if span and span.parent and span.parent.name == "h4":
+        text = span.parent.get_text(" ", strip=True)
+        m = re.search(r":\s*(.+)$", text)
+        return _clean(m.group(1)) if m else None
+    return None
+
+def _purpose_from_first_table(soup: BeautifulSoup) -> Optional[str]:
     """
-    Cari tabel yang header-nya mengandung 'Purpose', ambil sel pertama pada <tbody>.
+    Cari tabel yang header-nya mengandung 'Purpose', ambil sel pertama <tbody>.
     """
-    tables = soup.find_all("table")
-    for t in tables:
+    for t in soup.find_all("table"):
         ths = [th.get_text(" ", strip=True).lower() for th in t.find_all("th")]
         if any("purpose" in th for th in ths):
-            first_td = t.find("tbody")
-            if first_td:
-                first_row = first_td.find("tr")
-                if first_row:
-                    td = first_row.find_all("td")
-                    if td:
-                        return _clean(td[0].get_text(" ", strip=True))
+            tbody = t.find("tbody")
+            if not tbody:
+                continue
+            first_row = tbody.find("tr")
+            if not first_row:
+                continue
+            tds = first_row.find_all("td")
+            if tds:
+                return _clean(tds[0].get_text(" ", strip=True))
     return None
 
-def _position_from_activity_table(soup: BeautifulSoup) -> str | None:
+def _position_from_activity_table(soup: BeautifulSoup) -> Optional[str]:
     """
-    Cari tabel yang header-nya persis: Activity | Organization | Grade | Position
+    Cari tabel dengan header Activity | Organization | Grade | Position.
     Ambil sel 'Position' pada baris pertama.
     """
-    tables = soup.find_all("table")
-    for t in tables:
+    for t in soup.find_all("table"):
         ths = [th.get_text(" ", strip=True).lower() for th in t.find_all("th")]
         if {"activity", "organization", "grade", "position"}.issubset(set(ths)):
             tbody = t.find("tbody")
@@ -94,11 +104,50 @@ def _position_from_activity_table(soup: BeautifulSoup) -> str | None:
                 return _clean(tds[3].get_text(" ", strip=True))
     return None
 
-def _last_approved_role_and_name_from_history(soup: BeautifulSoup) -> tuple[str | None, str | None]:
+# ---------- H & I dari TIMELINE (yang dikotakin) ----------
+def _timeline_fixed_role_and_name(soup: BeautifulSoup) -> Tuple[Optional[str], Optional[str]]:
     """
-    Dari modal #approvalHistoryModal, ambil item dengan ikon 'bx-badge-check' (approved) terakhir.
-    Ambil <h5> sebagai role, <span class="text-muted"> sebagai nama.
+    Ambil H & I dari kartu di timeline (owl-carousel) yang dikotakin:
+    - Targetkan kartu yang H5-nya mengandung 'VICE PRESIDENT' (sesuai contoh).
+    - Role = teks <h5>, Name = <p> di bawahnya.
+    Jika tidak ketemu, fallback None, None.
     """
+    timeline = soup.find(id="timeline-carousel")
+    if not timeline:
+        return (None, None)
+
+    # Setiap item memiliki struktur: div.item.event-list > div > (div.event-date ... h5) + (div.mt-3 ... p.name)
+    for item in timeline.select("div.item.event-list"):
+        h5 = item.find("h5")
+        if not h5:
+            continue
+        role_text = h5.get_text(" ", strip=True)
+        # Kunci sesuai kotak yang Mas maksud: 'VICE PRESIDENT ...'
+        if re.search(r"\bVICE\s+PRESIDENT\b", role_text, flags=re.I):
+            # nama ada di <div class="mt-3 px-3"><p class="text-muted">Nama</p>
+            p_name = item.find("p", class_=re.compile(r"\btext-muted\b"))
+            name_text = p_name.get_text(" ", strip=True) if p_name else None
+            return (_clean(role_text), _clean(name_text))
+
+    # Kalau pola 'VICE PRESIDENT' tidak ketemu, sebagai cadangan:
+    # cari item dengan ikon check (approved) lalu ambil yang mengandung nama (p.text-muted)
+    approved_icons = timeline.select("i.bx.bx.bx-check-circle")
+    if approved_icons:
+        # ambil parent .item.event-list terdekat dari ikon approved pertama
+        icon = approved_icons[0]
+        item = icon.find_parent("div", class_=re.compile(r"\bitem\b"))
+        if item:
+            h5 = item.find("h5")
+            p_name = item.find("p", class_=re.compile(r"\btext-muted\b"))
+            return (
+                _clean(h5.get_text(" ", strip=True)) if h5 else None,
+                _clean(p_name.get_text(" ", strip=True)) if p_name else None,
+            )
+
+    return (None, None)
+
+# ---------- (Opsional) Fallback lama: last approved dari modal history ----------
+def _last_approved_role_and_name_from_history(soup: BeautifulSoup) -> Tuple[Optional[str], Optional[str]]:
     modal = soup.find(id="approvalHistoryModal")
     if not modal:
         return (None, None)
@@ -113,31 +162,32 @@ def _last_approved_role_and_name_from_history(soup: BeautifulSoup) -> tuple[str 
     last = approved[-1]
     role = last.find("h5")
     name = last.find("span", class_=re.compile(r"\btext-muted\b"))
-    return (_clean(role.get_text(" ", strip=True)) if role else None,
-            _clean(name.get_text(" ", strip=True)) if name else None)
+    role_text = _clean(role.get_text(" ", strip=True)) if role else None
+    name_text = _clean(name.get_text(" ", strip=True)) if name else None
+    return (role_text, name_text)
 
-def _daily_allowance_row(soup: BeautifulSoup) -> tuple[str | None, str | None]:
+# ---------- Daily Allowance ----------
+def _daily_allowance_row(soup: BeautifulSoup) -> Tuple[Optional[str], Optional[str]]:
     """
     Temukan baris 'Daily Allowance' pada tabel transaksi:
-    - Ambil '(3 Day)' -> 3
+    - Ambil '(3 Day)' -> '3'
     - Ambil kolom 'Total' (IDR …)
     """
-    rows = soup.find_all("tr")
-    for tr in rows:
+    for tr in soup.find_all("tr"):
         tds = tr.find_all("td")
         if not tds:
             continue
         first = tds[0].get_text(" ", strip=True).lower()
         if "daily allowance" in first:
-            # kolom ketiga berisi tanggal + (x Day)
             days_text = tds[2].get_text(" ", strip=True) if len(tds) >= 3 else ""
             m = re.search(r"\((\d+)\s*Day", days_text, re.I)
             days = m.group(1) if m else None
-            total = tds[-1].get_text(" ", strip=True) if tds else None
+            total = tds[-1].get_text(" ", strip=True)
             return (_clean(days), _clean(total))
     return (None, None)
 
-def parse_html_to_A_to_K(html: str) -> dict:
+# ---------- Entry point ----------
+def parse_html_to_A_to_K(html: str) -> Dict[str, Optional[str]]:
     soup = BeautifulSoup(html, "lxml")
 
     A = _employee_name_from_top_right(soup)
@@ -147,19 +197,16 @@ def parse_html_to_A_to_K(html: str) -> dict:
     E = _text_after_label(soup, "Return Date")
     F = _purpose_from_first_table(soup)
     G = _position_from_activity_table(soup)
-    H, I = _last_approved_role_and_name_from_history(soup)
+
+    # H & I: PRIORITAS dari timeline fixed (yang dikotakin).
+    H, I = _timeline_fixed_role_and_name(soup)
+    if not H and not I:
+        # fallback (opsional) ke modal history bila timeline tidak tersedia
+        H, I = _last_approved_role_and_name_from_history(soup)
+
     J, K = _daily_allowance_row(soup)
 
     return {
-        "A": A,
-        "B": B,
-        "C": C,
-        "D": D,
-        "E": E,
-        "F": F,
-        "G": G,
-        "H": H,
-        "I": I,
-        "J": J,
-        "K": K,
+        "A": A, "B": B, "C": C, "D": D, "E": E,
+        "F": F, "G": G, "H": H, "I": I, "J": J, "K": K
     }
