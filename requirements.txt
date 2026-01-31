@@ -2,4 +2,4 @@ streamlit>=1.32
 beautifulsoup4>=4.12
 lxml>=5.2
 reportlab>=3.6.13
-PyPDF2>=3.0.1   # opsional; perlu kalau kamu pakai overlay template PDF sebagai background
+PyPDF2>=3.0.1
