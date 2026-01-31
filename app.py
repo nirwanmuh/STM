@@ -57,6 +57,71 @@ def recompute_totals():
 
     st.session_state.totals_LQ = LQ
 
+# =========================
+# PDF Builder: Overlay A saja (koordinat bebas)
+# =========================
+def build_pdf_A_only(
+    background_pdf_bytes: bytes,
+    text_A: str,
+    x: float,
+    y: float,
+    font_size: int = 10,
+    bold: bool = False,
+) -> bytes:
+    """
+    Tulis hanya value A di koordinat (x, y) di atas template PDF 1 halaman.
+    (0,0) = kiri-bawah; satuan point.
+    """
+    if not background_pdf_bytes:
+        return b""
+
+    # Lazy import supaya app tidak crash jika dep belum terpasang
+    try:
+        from reportlab.pdfgen import canvas
+    except Exception as e:
+        import streamlit as st
+        st.error("Package `reportlab` belum terpasang. Tambahkan ke requirements.txt. Detail: " + str(e))
+        return b""
+    try:
+        from PyPDF2 import PdfReader, PdfWriter
+    except Exception as e:
+        import streamlit as st
+        st.error("Package `PyPDF2` belum terpasang. Tambahkan ke requirements.txt. Detail: " + str(e))
+        return b""
+
+    # Baca ukuran halaman dari template
+    base_reader = PdfReader(io.BytesIO(background_pdf_bytes))
+    base_page = base_reader.pages[0]
+    page_w = float(base_page.mediabox.width)
+    page_h = float(base_page.mediabox.height)
+
+    # Buat overlay transparan
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=(page_w, page_h))
+
+    font_name = "Helvetica-Bold" if bold else "Helvetica"
+    c.setFont(font_name, float(font_size))
+
+    # Tulis nilai A di titik (x, y)
+    if text_A:
+        c.drawString(float(x), float(y), str(text_A))
+
+    c.showPage()
+    c.save()
+    overlay_pdf = buf.getvalue()
+
+    # Merge overlay ke background
+    overlay_reader = PdfReader(io.BytesIO(overlay_pdf))
+    overlay_page = overlay_reader.pages[0]
+    base_page.merge_page(overlay_page)
+
+    writer = PdfWriter()
+    writer.add_page(base_page)
+
+    out_buf = io.BytesIO()
+    writer.write(out_buf)
+    return out_buf.getvalue()
+
 # -------------------- UI --------------------
 st.set_page_config(page_title="Trip HTML Parser (A–Q)", page_icon="🧭", layout="wide")
 ensure_states()
@@ -202,3 +267,102 @@ st.download_button(
     mime="application/json",
     use_container_width=True,
 )
+
+# =========================
+# ✍️ Tempatkan value A ke PDF (koordinat bebas)
+# =========================
+st.divider()
+st.subheader("✍️ Tempatkan value **A** ke PDF (koordinat bebas)")
+
+# Pastikan template tersedia
+DEFAULT_BG_PATH = os.environ.get("SPJ_BG_PATH", "assets/spj_blank.pdf")
+if "bg_template_bytes_A" not in st.session_state:
+    st.session_state.bg_template_bytes_A = None
+
+# Coba muat otomatis dari repo (sekali saja)
+if not st.session_state.bg_template_bytes_A:
+    try:
+        if os.path.exists(DEFAULT_BG_PATH):
+            with open(DEFAULT_BG_PATH, "rb") as f:
+                st.session_state.bg_template_bytes_A = f.read()
+            st.info(f"Template PDF dimuat dari: {DEFAULT_BG_PATH}")
+    except Exception as e:
+        st.warning(f"Tidak bisa membaca {DEFAULT_BG_PATH}: {e}")
+
+# Atau upload manual
+tpl_file_A = st.file_uploader("(Opsional) Unggah template PDF untuk penempatan A", type=["pdf"], key="tpl_for_A")
+if tpl_file_A is not None:
+    st.session_state.bg_template_bytes_A = tpl_file_A.read()
+    st.success("Template untuk penempatan A berhasil dimuat dari upload.")
+
+# Ambil value A dari hasil parse (jika ada)
+value_A = st.session_state.parsed_AK.get("A") if st.session_state.parsed_AK else ""
+st.text_input("Nilai A (Employee Name)", value=value_A or "", key="val_A_override", help="Bisa diedit jika perlu")
+
+colA1, colA2, colA3, colA4 = st.columns(4)
+with colA1:
+    x_A = st.number_input("Koordinat X (pt; 0=tepi kiri)", value=228.0, step=1.0)
+with colA2:
+    y_A = st.number_input("Koordinat Y (pt; 0=tepi bawah)", value=700.0, step=1.0)
+with colA3:
+    size_A = st.number_input("Ukuran font", value=10, step=1, min_value=6, max_value=48)
+with colA4:
+    bold_A = st.checkbox("Bold", value=False)
+
+colB1, colB2 = st.columns([1,1])
+with colB1:
+    do_preview_A = st.button("🔁 Preview A di PDF", use_container_width=True)
+with colB2:
+    do_download_A = st.button("⬇️ Unduh PDF (A saja)", use_container_width=True)
+
+# State untuk preview
+if "preview_A_pdf" not in st.session_state:
+    st.session_state.preview_A_pdf = None
+
+# Render preview
+if do_preview_A:
+    if not st.session_state.bg_template_bytes_A:
+        st.warning("Template PDF belum tersedia. Upload file atau letakkan di assets/spj_blank.pdf.")
+    else:
+        pdf_bytes_A = build_pdf_A_only(
+            background_pdf_bytes=st.session_state.bg_template_bytes_A,
+            text_A=st.session_state.get("val_A_override") or "",
+            x=x_A, y=y_A,
+            font_size=size_A,
+            bold=bold_A,
+        )
+        st.session_state.preview_A_pdf = pdf_bytes_A
+
+# Tampilkan preview jika ada
+if st.session_state.preview_A_pdf:
+    try:
+        import base64
+        import streamlit.components.v1 as components
+        b64 = base64.b64encode(st.session_state.preview_A_pdf).decode("utf-8")
+        components.html(
+            f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="900px" style="border:none;"></iframe>',
+            height=920,
+            scrolling=True,
+        )
+    except Exception as e:
+        st.warning(f"Gagal menampilkan preview inline: {e}")
+
+# Tombol unduh
+if do_download_A:
+    if not st.session_state.bg_template_bytes_A:
+        st.warning("Template PDF belum tersedia. Upload file atau letakkan di assets/spj_blank.pdf.")
+    else:
+        pdf_bytes_A = build_pdf_A_only(
+            background_pdf_bytes=st.session_state.bg_template_bytes_A,
+            text_A=st.session_state.get("val_A_override") or "",
+            x=x_A, y=y_A,
+            font_size=size_A,
+            bold=bold_A,
+        )
+        st.download_button(
+            "⬇️ Klik untuk menyimpan PDF (A)",
+            data=pdf_bytes_A,
+            file_name="SPJ_A_only.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
