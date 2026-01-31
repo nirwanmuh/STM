@@ -3,10 +3,12 @@
 import io
 import os
 import json
+import base64
 from datetime import datetime
 from typing import Optional, Dict, List
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from src.parser import parse_html_to_A_to_K
 
@@ -38,8 +40,43 @@ def ensure_states():
         st.session_state.totals_LQ: Dict[str, int] = {k: 0 for k in list("LMNOPQ")}
     if "bg_template_bytes" not in st.session_state:
         st.session_state.bg_template_bytes: Optional[bytes] = None
-    if "tune_dict" not in st.session_state:
-        st.session_state.tune_dict = None
+    if "tune_value" not in st.session_state:
+        # Struktur kalibrasi per-value (dx/dy) + global
+        st.session_state.tune_value = {
+            "GLOBAL": {"dx": 0.0, "dy": 0.0},
+            # Identitas:
+            "A": {"dx": 0.0, "dy": 0.0},   # ATAS NAMA
+            "B": {"dx": 0.0, "dy": 0.0},   # TEMPAT ASAL
+            "C": {"dx": 0.0, "dy": 0.0},   # TUJUAN
+            "D": {"dx": 0.0, "dy": 0.0},   # TGL BERANGKAT (identitas)
+            "E": {"dx": 0.0, "dy": 0.0},   # TGL KEMBALI (identitas)
+            "DAYS": {"dx": 0.0, "dy": 0.0},  # JUMLAH HARI (identitas)
+            # A. Harian:
+            "K": {"dx": 0.0, "dy": 0.0},      # nilai K (baris REALISASI HARI)
+            "A_DAYS": {"dx": 0.0, "dy": 0.0}, # jumlah hari di blok A
+            "K_DIFF": {"dx": 0.0, "dy": 0.0}, # K untuk SELISIH KURANG (blok A)
+            # D. Lain-lain:
+            "L": {"dx": 0.0, "dy": 0.0},
+            "M": {"dx": 0.0, "dy": 0.0},
+            "N": {"dx": 0.0, "dy": 0.0},
+            "O": {"dx": 0.0, "dy": 0.0},
+            "P": {"dx": 0.0, "dy": 0.0},
+            "Q": {"dx": 0.0, "dy": 0.0},    # selisih kurang total (kiri bawah D)
+            # Ringkasan:
+            "SUM_Q1": {"dx": 0.0, "dy": 0.0},   # I. TOTAL SELISIH KURANG (Q)
+            "SUM_QTOT": {"dx": 0.0, "dy": 0.0}, # TOTAL SELISIH (Q)
+            # TTD/Footer:
+            "H": {"dx": 0.0, "dy": 0.0},        # nama pejabat kiri (H) – jika kosong pakai I
+            "I": {"dx": 0.0, "dy": 0.0},        # nama alternatif kiri (I)
+            "A_SIGN": {"dx": 0.0, "dy": 0.0},   # nama pelaksana kanan (A)
+            "DATE_D": {"dx": 0.0, "dy": 0.0},   # tanggal (D) di footer
+            "DATE_E": {"dx": 0.0, "dy": 0.0},   # tanggal (E) di footer
+            "G": {"dx": 0.0, "dy": 0.0},        # jabatan (opsional) di footer
+        }
+    if "preview_pdf_bytes" not in st.session_state:
+        st.session_state.preview_pdf_bytes: Optional[bytes] = None
+    if "auto_preview" not in st.session_state:
+        st.session_state.auto_preview = False
 
 
 def recompute_totals():
@@ -88,18 +125,18 @@ def inclusive_days(d1: Optional[datetime], d2: Optional[datetime]) -> Optional[i
 
 
 # =========================
-# PDF Builder (Overlay 1:1)
+# PDF Builder (Overlay 1:1; per-value calibration)
 # =========================
 def build_spj_pdf_overlay(
     AK: Dict[str, Optional[str]],
     LQ: Dict[str, int],
     overlay_template_bytes: Optional[bytes],
-    tune: Optional[Dict[str, Dict[str, float]]] = None,
+    tune_value: Dict[str, Dict[str, float]],
 ) -> bytes:
     """
     Overlay nilai A–Q di atas template kosong (1 halaman).
     - Hanya menulis NILAI (tanpa label) agar tidak duplikasi dengan label di template.
-    - Koordinat disetel agar jatuh 1:1; fine-tune via 'tune'.
+    - Koordinat dipatok 1:1; setiap value bisa di-offset (dx/dy) via 'tune_value'.
     """
     # Lazy import agar UI tidak crash bila dependency belum terpasang
     try:
@@ -141,7 +178,8 @@ def build_spj_pdf_overlay(
 
     d_dt = parse_date_or_none(D)
     e_dt = parse_date_or_none(E)
-    hari_str = str(inclusive_days(d_dt, e_dt) or "")  # jumlah hari (inklusif)
+    days = inclusive_days(d_dt, e_dt) or 0
+    hari_str = str(days)
 
     def fmt_n(n: int) -> str:
         # 3.840.000
@@ -157,12 +195,15 @@ def build_spj_pdf_overlay(
     PAGE_W = float(base_page.mediabox.width)
     PAGE_H = float(base_page.mediabox.height)
 
-    # ---------- Offset kalibrasi ----------
-    tune = tune or {}
-    def _off(section: str) -> tuple[float, float]:
-        g = tune.get("global", {})
-        s = tune.get(section, {})
-        return float(g.get("dx", 0.0) + s.get("dx", 0.0)), float(g.get("dy", 0.0) + s.get("dy", 0.0))
+    # ---------- Offset per-value ----------
+    tv = tune_value or {}
+    gdx = float(tv.get("GLOBAL", {}).get("dx", 0.0))
+    gdy = float(tv.get("GLOBAL", {}).get("dy", 0.0))
+
+    def _v(key: str) -> tuple[float, float]:
+        dx = float(tv.get(key, {}).get("dx", 0.0))
+        dy = float(tv.get(key, {}).get("dy", 0.0))
+        return gdx + dx, gdy + dy
 
     # ---------- Canvas overlay ----------
     packet = io.BytesIO()
@@ -180,59 +221,44 @@ def build_spj_pdf_overlay(
         elif align == "right":
             c.drawRightString(x, y, text)
 
-    # ========== KOORDINAT (nilai saja, tanpa label) ==========
-    # —— IDENTITAS (nilai setelah ':') ——
-    dx, dy = _off("ident")
+    # ========== KOORDINAT DASAR (nilai saja, tanpa label) ==========
+    # — IDENTITAS —
     XVAL_IDENT = 228
-    draw_text(XVAL_IDENT + dx, PAGE_H - 136 + dy, A, size=10)      # ATAS NAMA
-    draw_text(XVAL_IDENT + dx, PAGE_H - 154 + dy, B, size=10)      # TEMPAT ASAL
-    draw_text(XVAL_IDENT + dx, PAGE_H - 172 + dy, C, size=10)      # TUJUAN
-    draw_text(XVAL_IDENT + dx, PAGE_H - 190 + dy, D, size=10)      # TGL BERANGKAT
-    draw_text(XVAL_IDENT + dx, PAGE_H - 208 + dy, E, size=10)      # TGL KEMBALI
-    draw_text(XVAL_IDENT + dx, PAGE_H - 226 + dy, hari_str, size=10)  # JUMLAH HARI (kata "Hari" ada di template)
+    dx, dy = _v("A");     draw_text(XVAL_IDENT + dx, PAGE_H - 136 + dy, A, size=10)        # ATAS NAMA
+    dx, dy = _v("B");     draw_text(XVAL_IDENT + dx, PAGE_H - 154 + dy, B, size=10)        # TEMPAT ASAL
+    dx, dy = _v("C");     draw_text(XVAL_IDENT + dx, PAGE_H - 172 + dy, C, size=10)        # TUJUAN
+    dx, dy = _v("D");     draw_text(XVAL_IDENT + dx, PAGE_H - 190 + dy, D, size=10)        # TGL BERANGKAT
+    dx, dy = _v("E");     draw_text(XVAL_IDENT + dx, PAGE_H - 208 + dy, E, size=10)        # TGL KEMBALI
+    dx, dy = _v("DAYS");  draw_text(XVAL_IDENT + dx, PAGE_H - 226 + dy, hari_str, size=10) # JUMLAH HARI
 
-    # —— A. HARIAN ——
-    dx, dy = _off("A")
-    # Nilai K (di baris REALISASI HARI)
-    draw_text(145 + dx, PAGE_H - 320 + dy, fmt_n(K_val), size=10)
-    # Jumlah hari
-    draw_text(92  + dx, PAGE_H - 338 + dy, hari_str, size=10)
-    # Selisih kurang = K
-    draw_text(145 + dx, PAGE_H - 374 + dy, fmt_n(K_val), size=10)
-    # Selisih tambah (kosong) → biarkan kosong (template sudah punya 'Rp.')
+    # — A. HARIAN —
+    dx, dy = _v("K");       draw_text(145 + dx, PAGE_H - 320 + dy, fmt_n(K_val), size=10)   # K (Realisasi Harian)
+    dx, dy = _v("A_DAYS");  draw_text(92  + dx, PAGE_H - 338 + dy, hari_str, size=10)       # Hari (blok A)
+    dx, dy = _v("K_DIFF");  draw_text(145 + dx, PAGE_H - 374 + dy, fmt_n(K_val), size=10)   # K (Selisih Kurang)
 
-    # —— B. PESAWAT ——
-    # Kosong → tidak ditulis
+    # — D. LAIN-LAIN (kolom angka kanan rata-kanan) —
+    XNUM_R = 330
+    if L_val: dx, dy = _v("L"); draw_text(XNUM_R + dx, PAGE_H - 728 + dy, fmt_n(L_val), size=10, align="right")
+    if M_val: dx, dy = _v("M"); draw_text(XNUM_R + dx, PAGE_H - 746 + dy, fmt_n(M_val), size=10, align="right")
+    if N_val: dx, dy = _v("N"); draw_text(XNUM_R + dx, PAGE_H - 764 + dy, fmt_n(N_val), size=10, align="right")
+    if O_val: dx, dy = _v("O"); draw_text(XNUM_R + dx, PAGE_H - 782 + dy, fmt_n(O_val), size=10, align="right")
+    if P_val: dx, dy = _v("P"); draw_text(XNUM_R + dx, PAGE_H - 800 + dy, fmt_n(P_val), size=10, align="right")
+    if Q_val: dx, dy = _v("Q"); draw_text(40 + dx, PAGE_H - 818 + dy, fmt_n(Q_val), size=10)  # total D (kiri)
 
-    # —— C. PENGINAPAN ——
-    # Kosong → tidak ditulis
-
-    # —— D. LAIN-LAIN (kolom angka kanan rata-kanan) ——
-    dx, dy = _off("D")
-    XNUM_R = 330  # kolom angka kanan (rapat ke tepi kanan kolom)
-    if L_val: draw_text(XNUM_R + dx, PAGE_H - 728 + dy, fmt_n(L_val), size=10, align="right")
-    if M_val: draw_text(XNUM_R + dx, PAGE_H - 746 + dy, fmt_n(M_val), size=10, align="right")
-    if N_val: draw_text(XNUM_R + dx, PAGE_H - 764 + dy, fmt_n(N_val), size=10, align="right")
-    if O_val: draw_text(XNUM_R + dx, PAGE_H - 782 + dy, fmt_n(O_val), size=10, align="right")
-    if P_val: draw_text(XNUM_R + dx, PAGE_H - 800 + dy, fmt_n(P_val), size=10, align="right")
-    # Selisih kurang total (di kiri bawah daftar)
-    if Q_val: draw_text(40 + dx, PAGE_H - 818 + dy, fmt_n(Q_val), size=10)
-
-    # —— RINGKASAN I / II / TOTAL (kanan) ——
-    dx, dy = _off("SUM")
+    # — RINGKASAN (I/II/TOTAL) —
     if Q_val:
-        draw_text(120 + dx, PAGE_H - 848 + dy, fmt_n(Q_val), size=10, bold=True)  # I. TOTAL SELISIH KURANG
-        draw_text(120 + dx, PAGE_H - 912 + dy, fmt_n(Q_val), size=10, bold=True)  # TOTAL SELISIH
+        dx, dy = _v("SUM_Q1");  draw_text(120 + dx, PAGE_H - 848 + dy, fmt_n(Q_val), size=10, bold=True)  # I. TOTAL SELISIH KURANG
+        dx, dy = _v("SUM_QTOT");draw_text(120 + dx, PAGE_H - 912 + dy, fmt_n(Q_val), size=10, bold=True)  # TOTAL SELISIH
     # II. TOTAL SELISIH TAMBAH = '-' → tidak ditulis
 
-    # —— Mengetahui / TTD ——
-    dx, dy = _off("TTD")
-    draw_text(40  + dx, PAGE_H - 948 + dy, (H if H else I), size=10, bold=True)  # kiri
-    draw_text(300 + dx, PAGE_H - 948 + dy, A,             size=10, bold=True)    # kanan
-    draw_text(40  + dx, PAGE_H - 972 + dy, D, size=10)                            # tanggal mulai
-    draw_text(180 + dx, PAGE_H - 972 + dy, E, size=10)                            # tanggal akhir
+    # — Mengetahui / TTD —
+    ttd_left_name = H if H else I
+    dx, dy = _v("H" if H else "I"); draw_text(40 + dx,  PAGE_H - 948 + dy, ttd_left_name, size=10, bold=True)  # kiri
+    dx, dy = _v("A_SIGN");         draw_text(300 + dx, PAGE_H - 948 + dy, A,              size=10, bold=True)  # kanan
+    dx, dy = _v("DATE_D");         draw_text(40 + dx,  PAGE_H - 972 + dy, D, size=10)                        # tanggal mulai
+    dx, dy = _v("DATE_E");         draw_text(180 + dx, PAGE_H - 972 + dy, E, size=10)                        # tanggal akhir
     if G:
-        draw_text(40 + dx, PAGE_H - 990 + dy, G, size=10)                         # jabatan (opsional)
+        dx, dy = _v("G");          draw_text(40 + dx, PAGE_H - 990 + dy, G, size=10)                         # jabatan (opsional)
 
     # Selesai overlay
     c.showPage()
@@ -261,7 +287,7 @@ st.set_page_config(page_title="Trip HTML Parser (A–Q) + SPJ PDF (Overlay)", pa
 ensure_states()
 
 st.title("🧭 Trip HTML Parser (A–Q) + SPJ PDF (Overlay)")
-st.caption("Tempel/unggah HTML → A–K → Reimburse (L–Q) → Unduh PDF di atas template kosong")
+st.caption("Tempel/unggah HTML → A–K → Reimburse (L–Q) → Live View + Unduh PDF di atas template kosong (kalibrasi per–value)")
 
 with st.expander("Cara pakai", expanded=False):
     st.markdown("""
@@ -270,7 +296,8 @@ with st.expander("Cara pakai", expanded=False):
     3) Siapkan **template kosong** sebagai background:
        - Letakkan file di repo: `assets/spj_blank.pdf`, atau
        - Unggah melalui komponen uploader di bawah.  
-    4) (Opsional) Sesuaikan **kalibrasi offset** bila perlu → Unduh **PDF SPJ (Overlay)**.
+    4) Gunakan **Kalibrasi per–value** bila perlu → klik **🔁 Refresh Live View** untuk melihat hasilnya langsung.  
+    5) Jika sudah pas, klik **🧾 Unduh PDF SPJ (Overlay)**.
     """)
 
 # ========== Input HTML ==========
@@ -419,49 +446,121 @@ if bg_file is not None:
     st.session_state.bg_template_bytes = bg_file.read()
     st.success("Template background berhasil dimuat dari upload.")
 
-# ===== Kalibrasi posisi (opsional) =====
-st.subheader("🎯 Kalibrasi posisi (opsional)")
-with st.expander("Buka kalibrasi", expanded=False):
-    st.caption("Satuan = point (pt). 1 pt ≈ 0.3528 mm. Mulai dari offset kecil: 1–3 pt.")
+# ===== Kalibrasi per–value =====
+st.subheader("🎯 Kalibrasi per–value")
+with st.expander("Buka kalibrasi per–value", expanded=False):
+    st.caption("Satuan = point (pt). 1 pt ≈ 0.3528 mm. Atur dx (+kanan/−kiri), dy (+atas/−bawah).")
 
-    colg1, colg2 = st.columns(2)
-    with colg1:
-        g_dx = st.number_input("Global dx (+kanan / −kiri)", value=0.0, step=1.0, key="cal_g_dx")
-        a_dx = st.number_input("A (Harian) dx", value=0.0, step=1.0, key="cal_A_dx")
-        b_dx = st.number_input("B (Pesawat) dx", value=0.0, step=1.0, key="cal_B_dx")
-        c_dx = st.number_input("C (Penginapan) dx", value=0.0, step=1.0, key="cal_C_dx")
-        d_dx = st.number_input("D (Lain-lain) dx", value=0.0, step=1.0, key="cal_D_dx")
-    with colg2:
-        g_dy = st.number_input("Global dy (+atas / −bawah)", value=0.0, step=1.0, key="cal_g_dy")
-        a_dy = st.number_input("A (Harian) dy", value=0.0, step=1.0, key="cal_A_dy")
-        b_dy = st.number_input("B (Pesawat) dy", value=0.0, step=1.0, key="cal_B_dy")
-        c_dy = st.number_input("C (Penginapan) dy", value=0.0, step=1.0, key="cal_C_dy")
-        d_dy = st.number_input("D (Lain-lain) dy", value=0.0, step=1.0, key="cal_D_dy")
+    tv = st.session_state.tune_value
 
-    colb1, colb2 = st.columns(2)
-    with colb1:
-        ident_dx = st.number_input("Identitas dx", value=0.0, step=1.0, key="cal_ident_dx")
-        sum_dx   = st.number_input("Ringkasan (I/II/TOTAL) dx", value=0.0, step=1.0, key="cal_SUM_dx")
-        ttd_dx   = st.number_input("TTD dx", value=0.0, step=1.0, key="cal_TTD_dx")
-    with colb2:
-        ident_dy = st.number_input("Identitas dy", value=0.0, step=1.0, key="cal_ident_dy")
-        sum_dy   = st.number_input("Ringkasan (I/II/TOTAL) dy", value=0.0, step=1.0, key="cal_SUM_dy")
-        ttd_dy   = st.number_input("TTD dy", value=0.0, step=1.0, key="cal_TTD_dy")
+    # Global
+    g1, g2 = st.columns(2)
+    with g1:
+        tv["GLOBAL"]["dx"] = st.number_input("GLOBAL dx", value=float(tv["GLOBAL"]["dx"]), step=1.0, key="val_G_dx")
+    with g2:
+        tv["GLOBAL"]["dy"] = st.number_input("GLOBAL dy", value=float(tv["GLOBAL"]["dy"]), step=1.0, key="val_G_dy")
 
-    st.caption("Tip: coba mulai Global dy = +2 atau −2. Jika semua naik/turun, berarti offset global sudah tepat.")
+    st.markdown("**Identitas**")
+    keys_id = [("A", "A (Atas Nama)"), ("B", "B (Tempat Asal)"), ("C", "C (Tujuan)"),
+               ("D", "D (Tgl Berangkat)"), ("E", "E (Tgl Kembali)"), ("DAYS", "Days (E−D)")]
+    for key, label in keys_id:
+        cdx, cdy = st.columns(2)
+        with cdx:
+            tv[key]["dx"] = st.number_input(f"{label} dx", value=float(tv[key]["dx"]), step=1.0, key=f"val_{key}_dx")
+        with cdy:
+            tv[key]["dy"] = st.number_input(f"{label} dy", value=float(tv[key]["dy"]), step=1.0, key=f"val_{key}_dy")
 
-    st.session_state["tune_dict"] = {
-        "global": {"dx": g_dx, "dy": g_dy},
-        "ident":  {"dx": ident_dx, "dy": ident_dy},
-        "A":      {"dx": a_dx, "dy": a_dy},
-        "B":      {"dx": b_dx, "dy": b_dy},
-        "C":      {"dx": c_dx, "dy": c_dy},
-        "D":      {"dx": d_dx, "dy": d_dy},
-        "SUM":    {"dx": sum_dx, "dy": sum_dy},
-        "TTD":    {"dx": ttd_dx, "dy": ttd_dy},
-    }
+    st.markdown("**A. Harian**")
+    a_keys = [("K", "K (Realisasi Harian)"), ("A_DAYS", "Hari (blok A)"), ("K_DIFF", "K (Selisih Kurang)")]
+    for key, label in a_keys:
+        cdx, cdy = st.columns(2)
+        with cdx:
+            tv[key]["dx"] = st.number_input(f"{label} dx", value=float(tv[key]["dx"]), step=1.0, key=f"val_{key}_dx")
+        with cdy:
+            tv[key]["dy"] = st.number_input(f"{label} dy", value=float(tv[key]["dy"]), step=1.0, key=f"val_{key}_dy")
+
+    st.markdown("**D. Lain-lain (angka kanan)**")
+    d_keys = [("L", "L (Bensin)"), ("M", "M (Hotel)"), ("N", "N (Toll)"), ("O", "O (Transportasi)"),
+              ("P", "P (Parkir)"), ("Q", "Q (Total D; kiri bawah)")]
+    for key, label in d_keys:
+        cdx, cdy = st.columns(2)
+        with cdx:
+            tv[key]["dx"] = st.number_input(f"{label} dx", value=float(tv[key]["dx"]), step=1.0, key=f"val_{key}_dx")
+        with cdy:
+            tv[key]["dy"] = st.number_input(f"{label} dy", value=float(tv[key]["dy"]), step=1.0, key=f"val_{key}_dy")
+
+    st.markdown("**Ringkasan (kanan)**")
+    sum_keys = [("SUM_Q1", "I. TOTAL SELISIH KURANG (Q)"), ("SUM_QTOT", "TOTAL SELISIH (Q)")]
+    for key, label in sum_keys:
+        cdx, cdy = st.columns(2)
+        with cdx:
+            tv[key]["dx"] = st.number_input(f"{label} dx", value=float(tv[key]["dx"]), step=1.0, key=f"val_{key}_dx")
+        with cdy:
+            tv[key]["dy"] = st.number_input(f"{label} dy", value=float(tv[key]["dy"]), step=1.0, key=f"val_{key}_dy")
+
+    st.markdown("**TTD & Footer**")
+    ttd_keys = [("H", "Nama Pejabat Kiri (H)"), ("I", "Nama Pejabat Kiri (I; fallback)"), ("A_SIGN", "Nama Pelaksana Kanan (A)"),
+                ("DATE_D", "Tanggal Footer (D)"), ("DATE_E", "Tanggal Footer (E)"), ("G", "Jabatan Footer (G)")]
+    for key, label in ttd_keys:
+        cdx, cdy = st.columns(2)
+        with cdx:
+            tv[key]["dx"] = st.number_input(f"{label} dx", value=float(tv[key]["dx"]), step=1.0, key=f"val_{key}_dx")
+        with cdy:
+            tv[key]["dy"] = st.number_input(f"{label} dy", value=float(tv[key]["dy"]), step=1.0, key=f"val_{key}_dy")
+
+    # Auto-refresh preview
+    st.session_state.auto_preview = st.checkbox("Auto-refresh preview saat mengubah offset", value=st.session_state.auto_preview)
+
+# ========== 📺 Live View (Preview PDF) ==========
+st.subheader("📺 Live View (Preview PDF)")
+pcol1, pcol2 = st.columns([1, 1])
+
+with pcol1:
+    if st.button("🔁 Refresh Live View", use_container_width=True):
+        if not st.session_state.parsed_AK:
+            st.warning("Data A–K belum ada. Silakan parse HTML terlebih dahulu.")
+        elif not st.session_state.bg_template_bytes:
+            st.warning("Template background belum tersedia. Upload file atau letakkan di assets/spj_blank.pdf.")
+        else:
+            pdf_bytes = build_spj_pdf_overlay(
+                st.session_state.parsed_AK,
+                st.session_state.totals_LQ,
+                st.session_state.bg_template_bytes,
+                tune_value=st.session_state.tune_value,
+            )
+            st.session_state.preview_pdf_bytes = pdf_bytes
+
+with pcol2:
+    if st.button("🧹 Hapus Preview", use_container_width=True):
+        st.session_state.preview_pdf_bytes = None
+
+# Auto-refresh jika diaktifkan (dan data tersedia)
+if st.session_state.auto_preview and st.session_state.parsed_AK and st.session_state.bg_template_bytes:
+    pdf_bytes = build_spj_pdf_overlay(
+        st.session_state.parsed_AK,
+        st.session_state.totals_LQ,
+        st.session_state.bg_template_bytes,
+        tune_value=st.session_state.tune_value,
+    )
+    st.session_state.preview_pdf_bytes = pdf_bytes
+
+# Tampilkan preview jika ada
+if st.session_state.preview_pdf_bytes:
+    b64 = base64.b64encode(st.session_state.preview_pdf_bytes).decode("utf-8")
+    iframe_html = f'''
+        <iframe
+            src="data:application/pdf;base64,{b64}"
+            width="100%"
+            height="820"
+            type="application/pdf"
+        ></iframe>
+    '''
+    components.html(iframe_html, height=840, scrolling=True)
+else:
+    st.info("Preview belum tersedia. Klik **🔁 Refresh Live View** setelah mengatur kalibrasi.")
 
 # ========== Export PDF (Overlay) ==========
+st.divider()
 st.subheader("📄 Export PDF — SPJ (overlay di atas template)")
 if st.button("🧾 Unduh PDF SPJ (Overlay)", use_container_width=True):
     if not st.session_state.parsed_AK:
@@ -469,17 +568,13 @@ if st.button("🧾 Unduh PDF SPJ (Overlay)", use_container_width=True):
     elif not st.session_state.bg_template_bytes:
         st.warning("Template background belum tersedia. Upload file atau letakkan di assets/spj_blank.pdf.")
     else:
-        tune = st.session_state.get("tune_dict", None)
         pdf_bytes = build_spj_pdf_overlay(
             st.session_state.parsed_AK,
-            totals,
+            st.session_state.totals_LQ,
             st.session_state.bg_template_bytes,
-            tune=tune
+            tune_value=st.session_state.tune_value,
         )
-        if pdf_bytes:
-            st.download_button(
-                "⬇️ Klik untuk mengunduh PDF SPJ (Overlay)",
-                pdf_bytes,
+          pdf_bytes,
                 file_name="SPJ_Realisasi_Perjalanan_Dinas_overlay.pdf",
                 mime="application/pdf",
                 use_container_width=True,
