@@ -14,11 +14,7 @@ from src.parser import parse_html_to_A_to_K
 # Helpers
 # =========================
 def idr_to_int(s: str) -> int:
-    """
-    Konversi teks nominal menjadi integer rupiah.
-    Menerima format: 'IDR 1.200.000', '1,200,000', '1200000', dsb.
-    Aturan: buang semua karakter non-digit, abaikan desimal.
-    """
+    """'IDR 1.200.000' / '1,200,000' / '1200000' -> 1200000"""
     if s is None:
         return 0
     digits = "".join(ch for ch in str(s) if ch.isdigit())
@@ -26,14 +22,38 @@ def idr_to_int(s: str) -> int:
 
 
 def fmt_idr(n: int) -> str:
-    """Format ribuan gaya Indonesia: titik pemisah ribuan, prefix IDR."""
     s = f"{n:,}".replace(",", ".")
     return f"IDR {s}"
 
 
 def fmt_n(n: int) -> str:
-    """Format angka (tanpa prefix), contoh 3840000 -> '3.840.000'."""
     return f"{n:,}".replace(",", ".")
+
+
+def parse_date_or_none(s: Optional[str]):
+    """Coba parse beberapa format tanggal EN; gagal -> None."""
+    if not s:
+        return None
+    from datetime import datetime
+    for fmt in ("%d %B, %Y", "%d %b, %Y", "%d %B %Y", "%d %b %Y",
+                "%d/%B/%Y", "%d/%b/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s.strip(), fmt)
+        except Exception:
+            continue
+    return None
+
+
+def day_diff_exclusive(D: Optional[str], E: Optional[str]) -> Optional[int]:
+    """
+    Hitung (E - D) dalam hari (EXCLUSIVE): 19..21 -> 2.
+    Jika gagal parse -> None.
+    """
+    d1 = parse_date_or_none(D)
+    d2 = parse_date_or_none(E)
+    if not d1 or not d2:
+        return None
+    return (d2.date() - d1.date()).days
 
 
 def ensure_states():
@@ -53,28 +73,42 @@ def ensure_states():
         st.session_state.val_overrides: Dict[str, str] = {}
     # Gaya/koordinat per value
     if "coord_style" not in st.session_state:
-        # A,B,C,D,E,J -> FIXED (tidak diedit user):
+        # A,B,C,D,E,J kiri: FIXED (tidak diedit user)
         st.session_state.coord_style = {
             # fmt: "raw" | "number" | "auto"
-            "A": {"x": 190.0, "y": 666.0,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
-            "B": {"x": 190.0, "y": 652.5,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
-            "C": {"x": 190.0, "y": 639.0,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
-            "D": {"x": 190.0, "y": 625.5,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
-            "E": {"x": 190.0, "y": 612.0,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
-            "J": {"x": 190.0, "y": 600.0,  "size": 9, "bold": False, "fmt": "raw",    "from_right": False, "locked": True},
-            # F,G,H,I (bebas edit normal dari kiri):
-            "F": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
-            "G": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
-            "H": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
-            "I": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "raw",   "from_right": False, "locked": False},
-            # K..Q: X dihitung dari kanan (from_right=True), teks rata kanan
-            "K": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
-            "L": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
-            "M": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
-            "N": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
-            "O": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
-            "P": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
-            "Q": {"x": 0.0,   "y": 0.0,    "size": 10, "bold": False, "fmt": "number","from_right": True,  "locked": False},
+            "A": {"x": 190.0, "y": 666.0, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "locked": True},
+            "B": {"x": 190.0, "y": 652.5, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "locked": True},
+            "C": {"x": 190.0, "y": 639.0, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "locked": True},
+            "D": {"x": 190.0, "y": 625.5, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "locked": True},
+            "E": {"x": 190.0, "y": 612.0, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "locked": True},
+            # J kiri (190,600) → nilainya E-D (exclusive)
+            "J": {"x": 190.0, "y": 600.0, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "locked": True},
+
+            # F,G,H,I: masih bebas bila ingin dipakai (dari kiri)
+            "F": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw", "from_right": False, "locked": False},
+            "G": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw", "from_right": False, "locked": False},
+            "H": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw", "from_right": False, "locked": False},
+            "I": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw", "from_right": False, "locked": False},
+
+            # K..Q kanan: X diisi sebagai jarak dari kanan + rata kanan
+            # Nilai yang diminta untuk dikunci:
+            "K": {"x": 260.0, "y": 548.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "locked": True},
+            # K (duplikat di y=534) -> ditangani sebagai item tambahan saat render
+            "L": {"x": 260.0, "y": 313.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "locked": True},
+            "M": {"x": 260.0, "y": 299.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "locked": True},
+            "N": {"x": 260.0, "y": 286.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "locked": True},
+            "O": {"x": 260.0, "y": 273.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "locked": True},
+            "P": {"x": 260.0, "y": 260.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "locked": True},
+            # Q belum dikunci (boleh diisi manual kalau nanti diminta)
+            "Q": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "number", "from_right": True, "locked": False},
+        }
+    # Item duplikasi (tidak tampil di UI, hard-coded dari permintaan)
+    if "extra_items" not in st.session_state:
+        st.session_state.extra_items = {
+            # K lagi (duplikat K) @ (X from right=260, Y=534, size=9)
+            "K_DUP": {"key": "K", "x": 260.0, "y": 534.0, "size": 9, "bold": False, "from_right": True},
+            # J kanan @ (X from right=110, Y=534, size=9) -> nilainya J (days) dari parse (bukan E-D)
+            "J_RIGHT": {"key": "J", "x": 110.0, "y": 534.0, "size": 9, "bold": False, "from_right": True},
         }
 
 
@@ -91,13 +125,8 @@ def recompute_totals():
 
 
 def get_value_for_key(key: str) -> str:
-    """
-    Ambil nilai final untuk key A..Q:
-      - cek override (jika user isi manual),
-      - jika tidak ada, ambil dari parsed_AK (A..K),
-      - untuk L..Q ambil dari totals_LQ,
-      - formatting sesuai 'fmt'.
-    """
+    """Ambil nilai final untuk key A..Q dengan formatting."""
+    # Override manual?
     ov = st.session_state.val_overrides.get(key)
     if ov not in (None, ""):
         return str(ov)
@@ -107,7 +136,7 @@ def get_value_for_key(key: str) -> str:
 
     if key in list("ABCDEFGHIJK"):
         raw = ak.get(key)
-        if key == "J" and raw:
+        if key == "J" and raw:  # default J dari parsing = angka hari (string)
             digits = "".join(ch for ch in str(raw) if ch.isdigit())
             raw = digits or raw
     elif key in list("LMNOPQ"):
@@ -144,16 +173,13 @@ def get_value_for_key(key: str) -> str:
 
 
 # =========================
-# PDF Builder: Multi (A–Q) + dukung X dari kanan & rata kanan
+# PDF Builder: Multi (A–Q) + kanan-rata-kanan
 # =========================
-def build_pdf_multi(
-    background_pdf_bytes: bytes,
-    items: List[Dict[str, object]],  # [{ "text": str, "x": float, "y": float, "size": int, "bold": bool, "from_right": bool }, ...]
-) -> bytes:
+def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]]) -> bytes:
     """
-    Tulis beberapa teks (A..Q) di koordinat berbeda dalam satu overlay di atas template PDF.
-    - Jika item['from_right'] = True, maka anchor = page_w - x_input dan gambar dengan drawRightString (rata kanan).
-    - Jika False, x dianggap dari kiri dan gambar dengan drawString (rata kiri).
+    Gambar semua teks pada posisi/format yang diberikan.
+    - from_right=True -> anchor = page_w - x; gambar dengan drawRightString (rata kanan).
+    - from_right=False -> gambar dengan drawString (rata kiri).
     """
     if not background_pdf_bytes:
         return b""
@@ -183,7 +209,7 @@ def build_pdf_multi(
         text = str(it.get("text") or "").strip()
         if not text:
             continue
-        x = float(it.get("x", 0))          # untuk from_right=True, ini adalah jarak dari kanan
+        x = float(it.get("x", 0))
         y = float(it.get("y", 0))
         size = int(it.get("size", 10))
         bold = bool(it.get("bold", False))
@@ -196,12 +222,9 @@ def build_pdf_multi(
             c.setFont("Helvetica", 10)
 
         if from_right:
-            # X diinput sebagai jarak dari kanan -> anchor = page_w - x
             x_anchor = page_w - x
-            # Tulis rata kanan ke anchor
             c.drawRightString(x_anchor, y, text)
         else:
-            # Normal: dari kiri, rata kiri
             c.drawString(x, y, text)
 
     c.showPage()
@@ -230,15 +253,15 @@ st.set_page_config(page_title="Trip HTML Parser (A–Q) + PDF Overlay", page_ico
 ensure_states()
 
 st.title("🧭 Trip HTML Parser (A–Q)")
-st.caption("Tempel/unggah HTML Trip Detail → Ekstrak A–K → Input Reimburse → Simpan L–Q → PDF Overlay (A–Q).")
+st.caption("Tempel/unggah HTML → A–K → Reimburse → L–Q → PDF Overlay (A–Q).")
 
 with st.expander("Cara pakai (singkat)", expanded=False):
     st.markdown(
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
         "- **Langkah 2**: Isi **Reimburse** untuk menghasilkan L–Q.\n"
         "- **Langkah 3**: Siapkan **template PDF** (otomatis dari `assets/spj_blank.pdf` atau upload manual).\n"
-        "- **Langkah 4**: A–E,J sudah **fixed** (koordinat & size). K–Q: **X diisi sebagai jarak dari kanan** & **tulisan rata kanan**.\n"
-        "- **Langkah 5**: Klik **Preview** untuk Live View PDF; klik **Download** untuk mengunduh."
+        "- **Langkah 4**: A–E,J kiri = fixed; K–Q kanan = X dari kanan + rata kanan (koordinat yang diminta sudah dikunci).\n"
+        "- **Langkah 5**: Preview & Download."
     )
 
 # ===== Input HTML =====
@@ -268,7 +291,7 @@ if parse_btn:
         st.stop()
     st.session_state.parsed_AK = parse_html_to_A_to_K(html_text)
 
-# Tampilkan A–K jika sudah ada
+# Hasil A–K
 if st.session_state.parsed_AK:
     st.subheader("Hasil Ekstraksi **A–K**")
     data = st.session_state.parsed_AK
@@ -346,12 +369,12 @@ st.code(json_str, language="json")
 st.download_button("💾 Unduh JSON (A–Q)", data=json_str, file_name="trip_A_to_Q.json", mime="application/json", use_container_width=True)
 
 # =========================
-# PDF Overlay (A–Q)
+# PDF Overlay (A–Q) – fixed sesuai permintaan
 # =========================
 st.divider()
-st.subheader("📄 PDF Overlay (A–Q)")
+st.subheader("📄 PDF Overlay (A–Q) – Koordinat Terkunci untuk nilai yang diminta")
 
-# Muat template
+# Template
 DEFAULT_BG_PATH = os.environ.get("SPJ_BG_PATH", "assets/spj_blank.pdf")
 if not st.session_state.bg_template_bytes:
     try:
@@ -367,7 +390,7 @@ if tpl_up is not None:
     st.session_state.bg_template_bytes = tpl_up.read()
     st.success("Template berhasil dimuat dari upload.")
 
-# ==== Override nilai (opsional) ====
+# Override nilai (opsional) – tetap diperbolehkan, tapi koordinat K,L,M,N,O,P juga sudah fixed
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
     cols = st.columns(4)
     keys1 = list("ABCDEFGHIJ")
@@ -380,47 +403,6 @@ with st.expander("✏️ Override Nilai (opsional)", expanded=False):
         with cols[i % 4]:
             st.session_state.val_overrides[k] = st.text_input(f"{k} (override)", value=st.session_state.val_overrides.get(k, ""))
 
-# ==== Koordinat ====
-with st.expander("📍 Koordinat & Style", expanded=True):
-    # A..E,J: tampil *fixed*, disabled
-    st.markdown("**Identitas (A–E, J) – fixed**")
-    fixed_keys = ["A", "B", "C", "D", "E", "J"]
-    fcols = st.columns(6)
-    for i, k in enumerate(fixed_keys):
-        cs = st.session_state.coord_style[k]
-        with fcols[i]:
-            st.number_input(f"{k} · X", value=float(cs["x"]), step=0.5, disabled=True, key=f"fx_{k}")
-            st.number_input(f"{k} · Y", value=float(cs["y"]), step=0.5, disabled=True, key=f"fy_{k}")
-            st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, disabled=True, key=f"fs_{k}")
-    st.caption("Koordinat & size A–E,J dikunci (tidak bisa diubah). Nilainya tetap bisa dioverride di panel di atas jika perlu.")
-
-    st.markdown("**Info Lain (F–I) – normal (patokan kiri)**")
-    group_fi = ["F", "G", "H", "I"]
-    gcols = st.columns(4)
-    for i, k in enumerate(group_fi):
-        cs = st.session_state.coord_style[k]
-        with gcols[i]:
-            st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X (dari kiri)", value=float(cs["x"]), step=1.0, key=f"x_{k}")
-            st.session_state.coord_style[k]["y"] = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
-            st.session_state.coord_style[k]["size"] = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
-            st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
-            st.session_state.coord_style[k]["fmt"] = st.selectbox(f"{k} · Format", options=["raw","number","auto"], index=["raw","number","auto"].index(cs.get("fmt","raw")), key=f"f_{k}")
-
-    st.markdown("**Nominal (K–Q) – X = jarak dari kanan, tulisan rata kanan**")
-    group_kq = ["K", "L", "M", "N", "O", "P", "Q"]
-    cols_kq = st.columns(7)
-    for i, k in enumerate(group_kq):
-        cs = st.session_state.coord_style[k]
-        with cols_kq[i]:
-            # Simpan X sebagai jarak dari kanan (akan dikonversi di builder)
-            st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X dari kanan", value=float(cs["x"]), step=1.0, key=f"x_{k}_right")
-            st.session_state.coord_style[k]["y"] = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
-            st.session_state.coord_style[k]["size"] = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
-            st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
-            st.session_state.coord_style[k]["fmt"] = st.selectbox(
-                f"{k} · Format", options=["raw","number","auto"], index=["raw","number","auto"].index(cs.get("fmt","number")), key=f"f_{k}"
-            )
-
 # Tombol preview & download
 pcol1, pcol2 = st.columns(2)
 with pcol1:
@@ -430,28 +412,68 @@ with pcol2:
 
 def _items_from_state() -> List[Dict[str, object]]:
     items: List[Dict[str, object]] = []
-    for k, style in st.session_state.coord_style.items():
-        x = float(style.get("x", 0))
-        y = float(style.get("y", 0))
-        size = int(style.get("size", 10))
-        bold = bool(style.get("bold", False))
-        from_right = bool(style.get("from_right", False))  # True untuk K..Q (X dari kanan)
-        locked = bool(style.get("locked", False))
 
-        # Skip jika belum ada koordinat (x=y=0) dan tidak locked
-        if x == 0 and y == 0 and not locked:
+    # 1) A..E,J kiri (fixed). Khusus J kiri: isi E-D (exclusive)
+    cs = st.session_state.coord_style
+    ak = st.session_state.parsed_AK or {}
+
+    for k in ["A","B","C","D","E","J"]:
+        style = cs[k]
+        x, y = style["x"], style["y"]
+        size, bold = style["size"], style["bold"]
+
+        if k == "J":
+            # J kiri = E-D (exclusive). Fallback ke J parse bila gagal.
+            value = day_diff_exclusive(ak.get("D"), ak.get("E"))
+            if value is None:
+                # fallback: gunakan J dari parse, ambil digitnya
+                raw = ak.get("J")
+                digits = "".join(ch for ch in str(raw or "") if ch.isdigit())
+                value = int(digits) if digits else ""
+            text = str(value)
+        else:
+            text = get_value_for_key(k)
+
+        if str(text).strip():
+            items.append({"text": str(text), "x": x, "y": y, "size": size, "bold": bold, "from_right": False})
+
+    # 2) F..I (jika diisi user, dari kiri)
+    for k in ["F","G","H","I"]:
+        style = cs[k]
+        x, y = style["x"], style["y"]
+        if x == 0 and y == 0:
             continue
+        size, bold = style["size"], style["bold"]
+        text = get_value_for_key(k).strip()
+        if text:
+            items.append({"text": text, "x": x, "y": y, "size": size, "bold": bold, "from_right": False})
 
-        txt = get_value_for_key(k).strip()
-        if not txt:
+    # 3) K..Q kanan (X dari kanan, rata kanan). Nilai-nilai yang diminta dikunci koordinatnya.
+    for k in ["K","L","M","N","O","P","Q"]:
+        style = cs[k]
+        x, y = style["x"], style["y"]
+        size, bold, fr = style["size"], style["bold"], style["from_right"]
+        if x == 0 and y == 0 and not style.get("locked", False):
             continue
+        text = get_value_for_key(k).strip()
+        if text:
+            items.append({"text": text, "x": x, "y": y, "size": size, "bold": bold, "from_right": fr})
 
-        items.append({
-            "text": txt,
-            "x": x, "y": y,
-            "size": size, "bold": bold,
-            "from_right": from_right,
-        })
+    # 4) Item tambahan (hard-coded): K duplikat @ (Xr=260, y=534), J kanan @ (Xr=110, y=534)
+    extras = st.session_state.extra_items
+    # K_DUP
+    kd = extras["K_DUP"]
+    text_k = get_value_for_key(kd["key"]).strip()
+    if text_k:
+        items.append({"text": text_k, "x": kd["x"], "y": kd["y"], "size": kd["size"], "bold": kd["bold"], "from_right": kd["from_right"]})
+    # J_RIGHT (pakai J dari parsing – bukan E-D)
+    jr = extras["J_RIGHT"]
+    # Ambil J parse
+    raw_j = (st.session_state.parsed_AK or {}).get("J")
+    j_text = "".join(ch for ch in str(raw_j or "") if ch.isdigit())
+    if j_text:
+        items.append({"text": j_text, "x": jr["x"], "y": jr["y"], "size": jr["size"], "bold": jr["bold"], "from_right": jr["from_right"]})
+
     return items
 
 # Generate preview
@@ -461,26 +483,25 @@ if do_preview:
     else:
         items = _items_from_state()
         if not items:
-            st.warning("Belum ada koordinat yang diisi. Set minimal satu value lalu Preview.")
+            st.warning("Belum ada koordinat yang diisi.")
         else:
             st.session_state.preview_pdf = build_pdf_multi(st.session_state.bg_template_bytes, items)
 
-# Tampilkan preview (Chrome-safe, pakai <embed>)
+# Preview (Chrome-safe)
 if st.session_state.preview_pdf:
     b64 = base64.b64encode(st.session_state.preview_pdf).decode("utf-8")
     html = f"""
     <div style="height: 920px; width: 100%; border: 1px solid #ddd;">
-      <embed src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
-             type="application/pdf" width="100%" height="100%"/>
+      data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH
       <p style="padding:8px;font-family:sans-serif;">
         Jika PDF tidak tampil, Anda bisa
-        <a download="preview.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
+        data:application/pdf;base64,{b64}mengunduhnya di sini</a>.
       </p>
     </div>
     """
     components.html(html, height=940, scrolling=True)
 else:
-    st.info("Preview belum tersedia. Klik **🔁 Preview PDF (A–Q)** setelah mengatur koordinat.")
+    st.info("Preview belum tersedia. Klik **🔁 Preview PDF (A–Q)** setelah mengatur reimbursenya.")
 
 # Download
 if do_download:
