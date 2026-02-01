@@ -70,41 +70,48 @@ def ensure_states():
     # Override nilai (opsional)
     if "val_overrides" not in st.session_state:
         st.session_state.val_overrides: Dict[str, str] = {}
-    # Gaya/koordinat per value (tambahkan "align": "left|center|right" & "max_width")
+    # Gaya/koordinat per value (tambahkan "align": "left|center|right", "underline": bool, "max_width")
     if "coord_style" not in st.session_state:
         st.session_state.coord_style = {
             # A–E, J kiri (fixed). J kiri ditulis di (190,600,size=9) dengan nilai (E-D+1).
-            "A": {"x": 190.0, "y": 666.0, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "B": {"x": 190.0, "y": 652.5, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "C": {"x": 190.0, "y": 639.0, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "D": {"x": 190.0, "y": 625.5, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "E": {"x": 190.0, "y": 612.0, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "J": {"x": 190.0, "y": 600.0, "size": 9, "bold": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "A": {"x": 190.0, "y": 666.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "B": {"x": 190.0, "y": 652.5, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "C": {"x": 190.0, "y": 639.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "D": {"x": 190.0, "y": 625.5, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "E": {"x": 190.0, "y": 612.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "J": {"x": 190.0, "y": 600.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
 
-            # F–I dari kiri dan editable.
-            # G/H/I diminta rata tengah & maksimal panjang 135pt (dibungkus per spasi).
-            "F": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": False},
-            "G": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw", "from_right": False, "align": "center", "locked": False, "max_width": 135.0},
-            "H": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw", "from_right": False, "align": "center", "locked": False, "max_width": 135.0},
-            "I": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "fmt": "raw", "from_right": False, "align": "center", "locked": False, "max_width": 135.0},
+            # F–I:
+            # F bebas (dari kiri, rata kiri)
+            "F": {"x": 0.0,   "y": 0.0,   "size": 10, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": False},
+            # G/H rata tengah + wrapping 135pt; koordinat disimpan sesuai instruksi
+            "G": {"x": 439.0, "y": 78.0,  "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True,  "max_width": 135.0},
+            "H": {"x": 124.0, "y": 78.0,  "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True,  "max_width": 135.0},
+            # I rata tengah, TANPA pembatasan panjang, bold + underline
+            "I": {"x": 124.0, "y": 88.0,  "size": 8,  "bold": True,  "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
 
             # K–Q: X diisi sebagai jarak dari kanan & teks rata kanan.
-            # Kunci koordinat K–P sesuai Mas; Q editable tapi sekarang tersimpan & ditampilkan benar.
-            "K": {"x": 260.0, "y": 548.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "L": {"x": 260.0, "y": 313.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "M": {"x": 260.0, "y": 299.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "N": {"x": 260.0, "y": 286.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "O": {"x": 260.0, "y": 273.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "P": {"x": 260.0, "y": 260.0, "size": 9, "bold": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "Q": {"x": 0.0,   "y": 0.0,   "size": 10,"bold": False, "fmt": "number", "from_right": True, "align": "right", "locked": False},
+            # Kunci K–P sesuai Mas. Q juga dikunci sesuai koordinat yang diminta.
+            "K": {"x": 260.0, "y": 548.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "L": {"x": 260.0, "y": 313.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "M": {"x": 260.0, "y": 299.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "N": {"x": 260.0, "y": 286.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "O": {"x": 260.0, "y": 273.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "P": {"x": 260.0, "y": 260.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            # Q utama (dikunci) sesuai koordinat yang diminta
+            "Q": {"x": 260.0, "y": 227.0, "size": 9,  "bold": True,  "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
         }
-    # Item duplikasi (hard-coded): K lagi & J kanan (REALISASI HARI)
+    # Item duplikasi (hard-coded):
     if "extra_items" not in st.session_state:
         st.session_state.extra_items = {
-            # K kedua @ (Xr=260, Y=534)
-            "K_DUP": {"key": "K", "x": 260.0, "y": 534.0, "size": 9, "bold": False, "from_right": True, "align": "right"},
-            # J kanan @ (Xr=110, Y=534) -> pakai J hasil parsing (digit)
-            "J_RIGHT": {"key": "J", "x": 110.0, "y": 534.0, "size": 9, "bold": False, "from_right": True, "align": "right"},
+            # Tetap: K kedua @ (Xr=260, Y=534)
+            "K_DUP": {"key": "K", "x": 260.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
+            # Tetap: J kanan @ (Xr=110, Y=534) -> pakai J hasil parsing (digit)
+            "J_RIGHT": {"key": "J", "x": 110.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
+            # Baru: Duplikat A @ (X=439, Y=88), size 8, bold + underline, rata tengah (tanpa wrap)
+            "A_DUP": {"key": "A", "x": 439.0, "y": 88.0,  "size": 8, "bold": True,  "underline": True,  "from_right": False, "align": "center"},
+            # Baru: Duplikat Q @ (Xr=260, Y=183), size 9, bold, rata kanan
+            "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
         }
 
 
@@ -116,7 +123,7 @@ def recompute_totals():
         j = row["jenis"].lower()
         totals[j] = totals.get(j, 0) + int(row["nominal"])
     LQ = {letter: totals.get(jenis, 0) for jenis, letter in kind_to_letter.items()}
-    LQ["Q"] = sum(totals.values())
+    LQ["Q"] = sum(LQ.values())
     st.session_state.totals_LQ = LQ
 
 
@@ -168,14 +175,16 @@ def get_value_for_key(key: str) -> str:
 
 
 # =========================
-# PDF Builder: Multi (A–Q) + alignment + wrapping G/H/I (135pt)
+# PDF Builder: Multi (A–Q) + alignment + wrapping (G/H 135pt) + underline
 # =========================
 def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]]) -> bytes:
     """
     Gambar semua teks pada posisi/format yang diberikan.
       - from_right=True -> anchor = page_w - x_input
       - align: "left"|"center"|"right"
-      - G/H/I: dukung pembungkusan per spasi pada max_width (default 135pt) dengan rata tengah.
+      - G/H: wrapping per spasi (max_width 135pt), rata tengah
+      - I & A_DUP: tanpa wrap, bisa underline
+      - underline: garis di bawah teks dengan panjang sesuai string
     """
     if not background_pdf_bytes:
         return b""
@@ -209,31 +218,28 @@ def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]])
         lines: List[str] = []
         current = ""
 
-        def width_of(s: str) -> float:
+        def w(s: str) -> float:
             return stringWidth(s, font_name, font_size)
 
-        for w in words:
-            candidate = (w if not current else current + " " + w)
-            if width_of(candidate) <= max_width:
+        for word in words:
+            candidate = word if not current else f"{current} {word}"
+            if w(candidate) <= max_width:
                 current = candidate
             else:
                 if current:
                     lines.append(current)
-                    current = w
-                    # Jika kata sendirian tetap > max_width, pecah paksa
-                    while width_of(current) > max_width and len(current) > 1:
-                        # cari titik potong terbaik
+                    current = word
+                    while w(current) > max_width and len(current) > 1:
                         cut = len(current)
-                        while cut > 1 and width_of(current[:cut]) > max_width:
+                        while cut > 1 and w(current[:cut]) > max_width:
                             cut -= 1
                         lines.append(current[:cut])
                         current = current[cut:]
                 else:
-                    # current kosong tapi w sendiri > max_width, pecah paksa
-                    tmp = w
-                    while width_of(tmp) > max_width and len(tmp) > 1:
+                    tmp = word
+                    while w(tmp) > max_width and len(tmp) > 1:
                         cut = len(tmp)
-                        while cut > 1 and width_of(tmp[:cut]) > max_width:
+                        while cut > 1 and w(tmp[:cut]) > max_width:
                             cut -= 1
                         lines.append(tmp[:cut])
                         tmp = tmp[cut:]
@@ -241,6 +247,19 @@ def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]])
         if current:
             lines.append(current)
         return lines
+
+    def draw_underlined_text(text: str, x_anchor: float, y: float, align: str, font_name: str, font_size: float):
+        """Garis underline di bawah teks sesuai alignment."""
+        width = stringWidth(text, font_name, font_size)
+        if align == "right":
+            x0 = x_anchor - width
+        elif align == "center":
+            x0 = x_anchor - width / 2.0
+        else:  # left
+            x0 = x_anchor
+        y_line = y - max(1.0, font_size * 0.15)
+        c.setLineWidth(0.6)
+        c.line(x0, y_line, x0 + width, y_line)
 
     for it in items:
         text = str(it.get("text") or "").strip()
@@ -251,9 +270,10 @@ def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]])
         y = float(it.get("y", 0))
         size = int(it.get("size", 10))
         bold = bool(it.get("bold", False))
+        underline = bool(it.get("underline", False))
         from_right = bool(it.get("from_right", False))
         align = (it.get("align") or "left").lower()
-        key = it.get("key")  # opsional: "A".."Q"
+        key = (it.get("key") or "").upper()
         max_width = float(it.get("max_width", 0.0))
 
         font = "Helvetica-Bold" if bold else "Helvetica"
@@ -267,14 +287,17 @@ def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]])
         # Anchor X
         x_anchor = (page_w - x_in) if from_right else x_in
 
-        # Khusus G/H/I: jika ada max_width (default 135) dan align center, lakukan wrapping
-        if key in ["G", "H", "I"] and align == "center" and (max_width or st.session_state.coord_style.get(key, {}).get("max_width")):
-            mw = max_width or float(st.session_state.coord_style[key].get("max_width", 135.0))
+        # Khusus G/H: wrapping 135pt (centered). I & A_DUP: no wrap (langsung tulis).
+        if key in ["G", "H"] and align == "center":
+            mw = max_width if max_width > 0 else 135.0
             lines = wrap_text_by_space(text, font, size, mw)
             line_height = size * 1.2
             y_cursor = y
             for ln in lines:
                 c.drawCentredString(x_anchor, y_cursor, ln)
+                # Garis bawah per baris jika underline True (jarang dipakai utk G/H)
+                if underline:
+                    draw_underlined_text(ln, x_anchor, y_cursor, "center", font, size)
                 y_cursor -= line_height
         else:
             # Gambar sesuai alignment umum
@@ -284,6 +307,8 @@ def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]])
                 c.drawCentredString(x_anchor, y, text)
             else:
                 c.drawString(x_anchor, y, text)
+            if underline:
+                draw_underlined_text(text, x_anchor, y, align, font, size)
 
     c.showPage()
     c.save()
@@ -318,7 +343,7 @@ with st.expander("Cara pakai (singkat)", expanded=False):
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
         "- **Langkah 2**: Isi **Reimburse** untuk menghasilkan L–Q.\n"
         "- **Langkah 3**: Siapkan **template PDF** (otomatis dari `assets/spj_blank.pdf` atau upload manual).\n"
-        "- **Langkah 4**: A–E,J fixed; K–Q: X dari kanan & rata kanan (Q sekarang tersimpan). F: dari kiri, G/H/I: dari kiri **rata tengah** + wrapping 135pt.\n"
+        "- **Langkah 4**: A–E,J fixed; K–Q: X dari kanan & rata kanan (Q & duplikat Q diset). G/H rata tengah 135pt; **I & duplikat A** rata tengah **tanpa pembatasan** & **underline**.\n"
         "- **Langkah 5**: Preview & Download."
     )
 
@@ -448,9 +473,8 @@ if tpl_up is not None:
     st.session_state.bg_template_bytes = tpl_up.read()
     st.success("Template berhasil dimuat dari upload.")
 
-# ====== Panel koordinat ======
+# Panel koordinat (A–E,J,G,H,I,K–Q sudah dikunci; F masih editable)
 with st.expander("📍 Koordinat & Style", expanded=True):
-    # A–E,J: fixed (disabled)
     st.markdown("**Identitas (A–E, J) – fixed**")
     fixed_keys = ["A", "B", "C", "D", "E", "J"]
     fcols = st.columns(6)
@@ -460,43 +484,41 @@ with st.expander("📍 Koordinat & Style", expanded=True):
             st.number_input(f"{k} · X", value=float(cs["x"]), step=0.5, disabled=True, key=f"fx_{k}")
             st.number_input(f"{k} · Y", value=float(cs["y"]), step=0.5, disabled=True, key=f"fy_{k}")
             st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, disabled=True, key=f"fs_{k}")
-    st.caption("Koordinat & size A–E,J dikunci. Nilainya boleh dioverride di panel 'Override Nilai' bila perlu.")
 
-    # F–I: editable. G/H/I rata tengah; panjang maksimal 135pt (dibungkus otomatis).
-    st.markdown("**Info Lain (F–I) – F dari kiri; G/H/I rata tengah (X = titik tengah, wrap 135pt)**")
-    group_fi = ["F", "G", "H", "I"]
-    gcols = st.columns(4)
-    for i, k in enumerate(group_fi):
+    st.markdown("**Info Lain (F–I) – F editable; G/H/I fixed (center, wrap 135pt untuk G/H, no-wrap untuk I)**")
+    # F editable
+    k = "F"
+    cs = st.session_state.coord_style[k]
+    f1, f2, f3, f4 = st.columns(4)
+    with f1:
+        st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X (dari kiri)", value=float(cs["x"]), step=1.0, key=f"x_{k}")
+    with f2:
+        st.session_state.coord_style[k]["y"] = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
+    with f3:
+        st.session_state.coord_style[k]["size"] = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
+    with f4:
+        st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
+
+    # G/H/I tampil locked
+    ghi_cols = st.columns(3)
+    for i, k in enumerate(["G","H","I"]):
         cs = st.session_state.coord_style[k]
-        with gcols[i]:
-            x_val = st.number_input(f"{k} · X{' (tengah)' if k in ['G','H','I'] else ' (dari kiri)'}", value=float(cs["x"]), step=1.0, key=f"x_{k}")
-            y_val = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
-            s_val = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
-            b_val = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
-            # simpan kembali
-            st.session_state.coord_style[k]["x"] = x_val
-            st.session_state.coord_style[k]["y"] = y_val
-            st.session_state.coord_style[k]["size"] = s_val
-            st.session_state.coord_style[k]["bold"] = b_val
-            # align G/H/I tetap center; F tetap left
+        with ghi_cols[i]:
+            st.number_input(f"{k} · X (tengah)", value=float(cs["x"]), step=1.0, key=f"x_{k}", disabled=True)
+            st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}", disabled=True)
+            st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}", disabled=True)
+            st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}", disabled=True)
 
-    # K–Q: X dari kanan & rata kanan. (PERBAIKAN) Simpan balik ke coord_style supaya Q muncul.
-    st.markdown("**Nominal (K–Q) – X = jarak dari kanan (rata kanan)**")
+    st.markdown("**Nominal (K–Q) – X dari kanan & rata kanan (K–P & Q dikunci)**")
     group_kq = ["K", "L", "M", "N", "O", "P", "Q"]
     cols_kq = st.columns(7)
     for i, k in enumerate(group_kq):
         cs = st.session_state.coord_style[k]
         with cols_kq[i]:
-            x_right = st.number_input(f"{k} · X dari kanan", value=float(cs["x"]), step=1.0, key=f"x_{k}_right", disabled=bool(cs.get("locked", False)))
-            y_val   = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}", disabled=bool(cs.get("locked", False)))
-            s_val   = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}", disabled=bool(cs.get("locked", False)))
-            b_val   = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}", disabled=bool(cs.get("locked", False)))
-            # simpan balik (ini yang sebelumnya bikin Q tidak muncul)
-            if not cs.get("locked", False):
-                st.session_state.coord_style[k]["x"] = x_right
-                st.session_state.coord_style[k]["y"] = y_val
-                st.session_state.coord_style[k]["size"] = s_val
-                st.session_state.coord_style[k]["bold"] = b_val
+            st.number_input(f"{k} · X dari kanan", value=float(cs["x"]), step=1.0, key=f"x_{k}_right", disabled=True)
+            st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}", disabled=True)
+            st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}", disabled=True)
+            st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}", disabled=True)
 
 # Override nilai (opsional)
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
@@ -527,7 +549,7 @@ def _items_from_state() -> List[Dict[str, object]]:
     for k in ["A","B","C","D","E","J"]:
         style = cs[k]
         x, y = style["x"], style["y"]
-        size, bold, align = style["size"], style["bold"], style["align"]
+        size, bold, align, ul = style["size"], style["bold"], style["align"], style["underline"]
         if k == "J":
             val = day_diff_inclusive(ak.get("D"), ak.get("E"))
             if val is None or val <= 0:
@@ -538,46 +560,54 @@ def _items_from_state() -> List[Dict[str, object]]:
         else:
             text = get_value_for_key(k)
         if str(text).strip():
-            items.append({"key": k, "text": str(text), "x": x, "y": y, "size": size, "bold": bold, "from_right": False, "align": align})
+            items.append({"key": k, "text": str(text), "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": False, "align": align})
 
-    # 2) F–I editable (dari kiri). G/H/I rata tengah + wrapping 135pt
+    # 2) F–I (F editable; G/H/I fixed). G/H center wrap; I center no-wrap underline
     for k in ["F","G","H","I"]:
         style = cs[k]
         x, y = style["x"], style["y"]
-        if x == 0 and y == 0:
-            continue
-        size, bold, align = style["size"], style["bold"], style["align"]
+        size, bold, fr, align, ul = style["size"], style["bold"], style["from_right"], style["align"], style["underline"]
         txt = get_value_for_key(k).strip()
+        if k == "F" and (x == 0 and y == 0):
+            continue
         if txt:
-            item = {"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold, "from_right": False, "align": align}
-            if k in ["G","H","I"]:
+            item = {"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": fr, "align": align}
+            if k in ["G","H"]:
                 item["max_width"] = float(style.get("max_width", 135.0))
             items.append(item)
 
-    # 3) K–Q kanan (X dari kanan + rata kanan). Q editable via panel.
+    # 3) K–Q kanan (X dari kanan + rata kanan) — semuanya locked termasuk Q
     for k in ["K","L","M","N","O","P","Q"]:
         style = cs[k]
         x, y = style["x"], style["y"]
-        size, bold, fr, align = style["size"], style["bold"], style["from_right"], style["align"]
-        if x == 0 and y == 0 and not style.get("locked", False):
-            continue
+        size, bold, fr, align, ul = style["size"], style["bold"], style["from_right"], style["align"], style["underline"]
         txt = get_value_for_key(k).strip()
         if txt:
-            items.append({"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold, "from_right": fr, "align": align})
+            items.append({"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": fr, "align": align})
 
-    # 4) Items tambahan: K_DUP (260,534) dan J_RIGHT (110,534)
+    # 4) Items tambahan: K_DUP, J_RIGHT, A_DUP, Q_DUP
     extras = st.session_state.extra_items
-    # K_DUP
+
     kd = extras["K_DUP"]
     text_k = get_value_for_key(kd["key"]).strip()
     if text_k:
-        items.append({"key": kd["key"], "text": text_k, "x": kd["x"], "y": kd["y"], "size": kd["size"], "bold": kd["bold"], "from_right": kd["from_right"], "align": kd["align"]})
-    # J_RIGHT (pakai J parse)
+        items.append({"key": kd["key"], "text": text_k, "x": kd["x"], "y": kd["y"], "size": kd["size"], "bold": kd["bold"], "underline": kd["underline"], "from_right": kd["from_right"], "align": kd["align"]})
+
     jr = extras["J_RIGHT"]
     raw_j = (st.session_state.parsed_AK or {}).get("J")
     j_text = "".join(ch for ch in str(raw_j or "") if ch.isdigit())
     if j_text:
-        items.append({"key": jr["key"], "text": j_text, "x": jr["x"], "y": jr["y"], "size": jr["size"], "bold": jr["bold"], "from_right": jr["from_right"], "align": jr["align"]})
+        items.append({"key": jr["key"], "text": j_text, "x": jr["x"], "y": jr["y"], "size": jr["size"], "bold": jr["bold"], "underline": jr["underline"], "from_right": jr["from_right"], "align": jr["align"]})
+
+    ad = extras["A_DUP"]
+    a_text = get_value_for_key(ad["key"]).strip()
+    if a_text:
+        items.append({"key": ad["key"], "text": a_text, "x": ad["x"], "y": ad["y"], "size": ad["size"], "bold": ad["bold"], "underline": ad["underline"], "from_right": ad["from_right"], "align": ad["align"]})
+
+    qd = extras["Q_DUP"]
+    q_text = get_value_for_key(qd["key"]).strip()
+    if q_text:
+        items.append({"key": qd["key"], "text": q_text, "x": qd["x"], "y": qd["y"], "size": qd["size"], "bold": qd["bold"], "underline": qd["underline"], "from_right": qd["from_right"], "align": qd["align"]})
 
     return items
 
