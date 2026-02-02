@@ -88,13 +88,21 @@ def ensure_states():
             "I": {"x": 124.0, "y": 88.0,  "size": 8,  "bold": True,  "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
 
             # K–Q: X dari kanan & rata kanan. K–P fixed; Q fixed (sesuai instruksi).
-            "K": {"x": 260.0, "y": 548.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "K": {"x": 260.0, "y": 520.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "L": {"x": 260.0, "y": 313.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "M": {"x": 260.0, "y": 299.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "N": {"x": 260.0, "y": 286.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "O": {"x": 260.0, "y": 273.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "P": {"x": 260.0, "y": 260.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "Q": {"x": 260.0, "y": 227.0, "size": 9,  "bold": True,  "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+
+            # === Tambahan: R & S (atasan) ===
+            # R: x=281, y=88, bold, center, underline, size=8, no-wrap
+            "R": {"x": 281.0, "y": 88.0, "size": 8, "bold": True, "underline": True,
+                  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
+            # S: x=281, y=78, center, size=7, wrap max 135pt
+            "S": {"x": 281.0, "y": 78.0, "size": 7, "bold": False, "underline": False,
+                  "fmt": "raw", "from_right": False, "align": "center", "locked": True, "max_width": 135.0},
         }
     # Item duplikasi (hard-coded)
     if "extra_items" not in st.session_state:
@@ -162,7 +170,7 @@ def get_value_for_key(key: str) -> str:
     ak = st.session_state.parsed_AK or {}
     lq = st.session_state.totals_LQ or {}
 
-    if key in list("ABCDEFGHIJK"):
+    if key in list("ABCDEFGHIJKRS"):
         raw = ak.get(key)
         if key == "J" and raw:
             digits = "".join(ch for ch in str(raw) if ch.isdigit())
@@ -197,14 +205,14 @@ def get_value_for_key(key: str) -> str:
 
 
 # =========================
-# PDF Builder: Multi (A–Q) + alignment + wrapping (G/H 135pt) + underline
+# PDF Builder: Multi (A–Q) + alignment + wrapping (G/H/S 135pt) + underline
 # =========================
 def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]]) -> bytes:
     """
     Gambar semua teks pada posisi/format yang diberikan.
       - from_right=True -> anchor = page_w - x_input
       - align: "left"|"center"|"right"
-      - G/H: wrapping per spasi (max_width 135pt), rata tengah
+      - G/H/S: wrapping per spasi (max_width 135pt), rata tengah
       - underline: garis di bawah teks sesuai alignment
     """
     if not background_pdf_bytes:
@@ -308,8 +316,8 @@ def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]])
         # Anchor X
         x_anchor = (page_w - x_in) if from_right else x_in
 
-        # G/H wrapping center
-        if key in ["G", "H"] and align == "center":
+        # G/H/S wrapping center
+        if key in ["G", "H", "S"] and align == "center":
             mw = max_width if max_width > 0 else 135.0
             lines = wrap_text_by_space(text, font, size, mw)
             line_height = size * 1.2
@@ -391,11 +399,29 @@ if parse_btn:
     if not html_text or not html_text.strip():
         st.error("Silakan tempel atau unggah HTML terlebih dahulu.")
         st.stop()
+    # Simpan R/S lama agar tidak hilang saat re-parse
+    old_r = (st.session_state.parsed_AK or {}).get("R")
+    old_s = (st.session_state.parsed_AK or {}).get("S")
     st.session_state.parsed_AK = parse_html_to_A_to_K(html_text)
+    if old_r:
+        st.session_state.parsed_AK["R"] = old_r
+    if old_s:
+        st.session_state.parsed_AK["S"] = old_s
 
-# Hasil A–K
+# ===== Data Atasan (R & S) =====
+st.subheader("👤 Data Atasan")
+with st.form("atasan_form", clear_on_submit=False):
+    r_input = st.text_input("Nama atasan", value=(st.session_state.parsed_AK.get("R") or ""), placeholder="nama atasan")
+    s_input = st.text_input("Jabatan atasan", value=(st.session_state.parsed_AK.get("S") or ""), placeholder="jabatan atasan")
+    submit_rs = st.form_submit_button("💾 Simpan Atasan", use_container_width=True)
+    if submit_rs:
+        st.session_state.parsed_AK["R"] = r_input.strip()
+        st.session_state.parsed_AK["S"] = s_input.strip()
+        st.success("Data atasan disimpan (R & S).")
+
+# Hasil A–K (+ R, S)
 if st.session_state.parsed_AK:
-    st.subheader("Hasil Ekstraksi **A–K**")
+    st.subheader("Hasil Ekstraksi **A–K** (+ R, S)")
     data = st.session_state.parsed_AK
     col1, col2 = st.columns(2)
     with col1:
@@ -404,6 +430,7 @@ if st.session_state.parsed_AK:
         st.write("**C** – Trip To:", data.get("C"))
         st.write("**D** – Depart Date:", data.get("D"))
         st.write("**E** – Return Date:", data.get("E"))
+        st.write("**R** – Nama Atasan:", data.get("R"))
     with col2:
         st.write("**F** – Purpose:", data.get("F"))
         st.write("**G** – Position:", data.get("G"))
@@ -411,6 +438,7 @@ if st.session_state.parsed_AK:
         st.write("**I** – (Timeline) By:", data.get("I"))
         st.write("**J** – Daily Allowance (Days):", data.get("J"))
         st.write("**K** – Daily Allowance Total:", data.get("K"))
+        st.write("**S** – Jabatan Atasan:", data.get("S"))
     st.divider()
 
 # ===== Reimburse L–Q =====
@@ -447,7 +475,7 @@ else:
         if c4.button("Hapus", key=f"del_{idx}", use_container_width=True):
             del st.session_state.reimburse_rows[idx - 1]
             recompute_totals()
-            st.experimental_rerun()
+            st.rerun()
 
 # Total L–Q
 recompute_totals()
@@ -462,7 +490,7 @@ tcols[3].metric("**O – Transportasi**", fmt_idr(totals["O"]))
 tcols[4].metric("**P – Parkir**", fmt_idr(totals["P"]))
 tcols[5].metric("**Q – Total Semua**", fmt_idr(totals["Q"]))
 
-# JSON A–Q
+# JSON A–Q (+ R,S)
 combined = {**st.session_state.parsed_AK, **{k: totals[k] for k in "LMNOPQ"}}
 st.divider()
 st.subheader("JSON (A–Q)")
@@ -490,13 +518,14 @@ if not st.session_state.bg_template_bytes:
 tpl_up = st.file_uploader("Atau upload template PDF (1 halaman)", type=["pdf"])
 if tpl_up is not None:
     st.session_state.bg_template_bytes = tpl_up.read()
+    st.session_state.preview_pdf = None  # reset preview
     st.success("Template berhasil dimuat dari upload.")
 
-# Panel koordinat (hanya F yang editable; lainnya locked)
+# Panel koordinat (F editable; lainnya locked)
 with st.expander("📍 Koordinat & Style", expanded=True):
-    st.markdown("**Identitas (A–E, J) – fixed**")
-    fixed_keys = ["A", "B", "C", "D", "E", "J"]
-    fcols = st.columns(6)
+    st.markdown("**Identitas (A–E, J, R, S) – fixed**")
+    fixed_keys = ["A", "B", "C", "D", "E", "J", "R", "S"]
+    fcols = st.columns(len(fixed_keys))
     for i, k in enumerate(fixed_keys):
         cs = st.session_state.coord_style[k]
         with fcols[i]:
@@ -531,7 +560,7 @@ with st.expander("📍 Koordinat & Style", expanded=True):
 # Override nilai (opsional)
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
     cols = st.columns(4)
-    keys1 = list("ABCDEFGHIJ")
+    keys1 = list("ABCDEFGHIJRS")
     keys2 = list("KLMNOPQ")
     for i, k in enumerate(keys1):
         with cols[i % 4]:
@@ -583,6 +612,30 @@ def _items_from_state() -> List[Dict[str, object]]:
             if k in ["G","H"]:
                 item["max_width"] = float(style.get("max_width", 135.0))
             items.append(item)
+
+    # 2b) R & S
+    # R: center, underline, no-wrap
+    r_style = cs["R"]
+    r_txt = (ak.get("R") or "").strip()
+    if r_txt:
+        items.append({
+            "key": "R", "text": r_txt,
+            "x": r_style["x"], "y": r_style["y"],
+            "size": r_style["size"], "bold": r_style["bold"], "underline": r_style["underline"],
+            "from_right": r_style["from_right"], "align": r_style["align"]
+        })
+
+    # S: center, wrap max_width = 135
+    s_style = cs["S"]
+    s_txt = (ak.get("S") or "").strip()
+    if s_txt:
+        items.append({
+            "key": "S", "text": s_txt,
+            "x": s_style["x"], "y": s_style["y"],
+            "size": s_style["size"], "bold": s_style["bold"], "underline": s_style["underline"],
+            "from_right": s_style["from_right"], "align": s_style["align"],
+            "max_width": float(s_style.get("max_width", 135.0))
+        })
 
     # 3) K–Q kanan (X dari kanan + rata kanan) — semuanya locked termasuk Q
     for k in ["K","L","M","N","O","P","Q"]:
