@@ -188,19 +188,20 @@ def ensure_states():
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True, "underline": False, "from_right": True, "align": "right"},
         }
 
+    
     # Koordinat HALAMAN 2 — EDITABLE (A2..Q2 + Q2_TB + DESC2 + R2 + S2)
     if "coord_style_page2" not in st.session_state:
         cs2 = {}
-
+    
         # A2 / G2
         cs2["A2"] = {"x": 167.0, "y": 653.0, "size": 9, "bold": False, "underline": False, "align": "left", "from_right": False, "max_width": 0.0}
         cs2["G2"] = {"x": 167.0, "y": 641.0, "size": 9, "bold": False, "underline": False, "align": "left", "from_right": False, "max_width": 0.0}
-
+    
         # K2..Q2 angka (right-anchored)
         def _right_num(x, y, size=9, bold=False):
             return {"x": float(x), "y": float(y), "size": int(size), "bold": bool(bold),
                     "underline": False, "align": "right", "from_right": True, "max_width": 0.0}
-
+    
         cs2["K2"] = _right_num(118, 432)
         cs2["L2"] = _right_num(118, 482.5)
         cs2["M2"] = _right_num(118, 495)
@@ -208,20 +209,25 @@ def ensure_states():
         cs2["O2"] = _right_num(118, 457.5)
         cs2["P2"] = _right_num(118, 445)
         cs2["Q2"] = _right_num(118, 420)  # Q2 = angka (Q+K)
-
-        # Q2_TB = terbilang (Q+K) — default x133,y407, max_width 350
-        cs2["Q2_TB"] = {"x": 133.0, "y": 407.0, "size": 9, "bold": False, "underline": False,
-                        "align": "left", "from_right": False, "max_width": 350.0}
-
-        # DESC2 = kalimat keterangan C/D/E/F (default 0,0 supaya tidak tercetak sampai diposisikan)
-        cs2["DESC2"] = {"x": 0.0, "y": 0.0, "size": 9, "bold": False, "underline": False,
-                        "align": "left", "from_right": False, "max_width": 350.0}
-
+    
+        # Q2_TB = terbilang (Q+K) — x133,y407, max_width 350 (SUDAH SESUAI)
+        cs2["Q2_TB"] = {
+            "x": 133.0, "y": 407.0, "size": 9, "bold": False, "underline": False,
+            "align": "left", "from_right": False, "max_width": 350.0
+        }
+    
+        # DESC2 = kalimat keterangan — SET KE x82,y370, size9, max_width 420 (DIUBAH)
+        cs2["DESC2"] = {
+            "x": 82.0, "y": 370.0, "size": 9, "bold": False, "underline": False,
+            "align": "left", "from_right": False, "max_width": 420.0
+        }
+    
         # R2 / S2 (opsional)
         cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True, "align": "center", "from_right": False, "max_width": 0.0}
         cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
-
+    
         st.session_state.coord_style_page2 = cs2
+    
 
     # Editor halaman 2 AKTIF
     st.session_state["lock_page2_coords"] = False
