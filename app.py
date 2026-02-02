@@ -255,26 +255,23 @@ def ensure_states():
         cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
 
         # ===== Tambahan custom (disimpan sesuai template yang kamu minta) =====
-        # CITY_TODAY: "Jakarta, [tanggal hari ini]"
         cs2["CITY_TODAY"] = {
             "x": 180.0, "y": 300.0, "size": 9, "bold": False, "underline": False,
             "align": "center", "from_right": True, "max_width": 0.0
         }
-        # A2_AGAIN: value A
         cs2["A2_AGAIN"] = {
             "x": 180.0, "y": 225.0, "size": 9, "bold": True, "underline": True,
             "align": "center", "from_right": True, "max_width": 0.0
         }
-        # G2_AGAIN: value G
         cs2["G2_AGAIN"] = {
             "x": 180.0, "y": 212.0, "size": 9, "bold": False, "underline": False,
-            "align": "center", "from_right": True, "max_width": 135.0
+            "align": "center", "from_right": True, "max_width": 0.0
         }
 
         st.session_state.coord_style_page2 = cs2
 
     # Lock editor halaman 2 (tidak ditampilkan di UI)
-    st.session_state["lock_page2_coords"] = not SHOW_OVERLAY_UI
+    st.session_state["lock_page2_coords"] = True  # force hide editor
 
 
 def recompute_totals():
@@ -543,15 +540,13 @@ st.set_page_config(page_title="Trip HTML Parser (A–Q) + PDF Overlay (2 Halaman
 ensure_states()
 
 st.title("🧭 Trip HTML Parser (A–Q)")
-st.caption("Tempel/unggah HTML → A–K → Reimburse → L–Q → PDF 2 Halaman (otomatis).")
+st.caption("Tempel/unggah HTML → A–K → Reimburse → L–Q → Generate & Download PDF 2 Halaman.")
 
 with st.expander("Cara pakai (singkat)", expanded=False):
     st.markdown(
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
-        "- **Langkah 2**: Isi **Data Atasan (R/S)** dan **Reimburse** untuk menghasilkan L–Q.\n"
-        "- **Langkah 3**: Siapkan **template PDF** (`assets/spj_blank.pdf` & `assets/spj_blank2.pdf`).\n"
-        "- **Langkah 4**: (Opsional/dev) Atur **Koordinat Halaman 2** bila `SHOW_OVERLAY_UI` aktif.\n"
-        "- **Langkah 5**: Preview & Download — otomatis **2 halaman**."
+        "- **Langkah 2**: Buka **Data Atasan** dan **Reimburse** (expand), isi datanya.\n"
+        "- **Langkah 3**: Klik **Generate PDF (2 Halaman)** lalu **Download**."
     )
 
 # ===== Input HTML =====
@@ -561,7 +556,7 @@ html_text = ""
 with tab1:
     html_text_input = st.text_area(
         "Tempel HTML kamu di sini",
-        height=420,
+        height=300,
         placeholder="Tempel seluruh HTML Trip Detail di sini...",
     )
     if html_text_input:
@@ -586,120 +581,82 @@ if parse_btn:
         st.session_state.parsed_AK["R"] = old_r
     if old_s:
         st.session_state.parsed_AK["S"] = old_s
+    st.success("HTML berhasil diparse.")
 
-# ===== Data Atasan (R & S) =====
-st.subheader("👤 Data Atasan")
-with st.form("atasan_form", clear_on_submit=False):
-    r_input = st.text_input("Nama atasan", value=(st.session_state.parsed_AK.get("R") or ""), placeholder="nama atasan")
-    s_input = st.text_input("Jabatan atasan", value=(st.session_state.parsed_AK.get("S") or ""), placeholder="jabatan atasan")
-    submit_rs = st.form_submit_button("💾 Simpan Atasan", use_container_width=True)
-    if submit_rs:
-        st.session_state.parsed_AK["R"] = r_input.strip()
-        st.session_state.parsed_AK["S"] = s_input.strip()
-        st.success("Data atasan disimpan (R & S).")
+# ===== Data Atasan (R & S) — collapsible =====
+with st.expander("👤 Data Atasan", expanded=False):
+    with st.form("atasan_form", clear_on_submit=False):
+        r_input = st.text_input("Nama atasan", value=(st.session_state.parsed_AK.get("R") or ""), placeholder="nama atasan")
+        s_input = st.text_input("Jabatan atasan", value=(st.session_state.parsed_AK.get("S") or ""), placeholder="jabatan atasan")
+        submit_rs = st.form_submit_button("💾 Simpan Atasan", use_container_width=True)
+        if submit_rs:
+            st.session_state.parsed_AK["R"] = r_input.strip()
+            st.session_state.parsed_AK["S"] = s_input.strip()
+            st.success("Data atasan disimpan (R & S).")
 
-# Hasil A–K (+ R, S)
-if st.session_state.parsed_AK:
-    st.subheader("Hasil Ekstraksi **A–K** (+ R, S)")
-    data = st.session_state.parsed_AK
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**A** – Employee Name:", data.get("A"))
-        st.write("**B** – Trip From:", data.get("B"))
-        st.write("**C** – Trip To:", data.get("C"))
-        st.write("**D** – Depart Date:", data.get("D"))
-        st.write("**E** – Return Date:", data.get("E"))
-        st.write("**R** – Nama Atasan:", data.get("R"))
-    with col2:
-        st.write("**F** – Purpose:", data.get("F"))
-        st.write("**G** – Position:", data.get("G"))
-        st.write("**H** – (Timeline) Role:", data.get("H"))
-        st.write("**I** – (Timeline) By:", data.get("I"))
-        st.write("**J** – Daily Allowance (Days):", data.get("J"))
-        st.write("**K** – Daily Allowance Total:", data.get("K"))
-        st.write("**S** – Jabatan Atasan:", data.get("S"))
-    st.divider()
+# ===== Reimburse — collapsible =====
+with st.expander("🧾 Reimburse", expanded=False):
+    with st.form("reimburse_form", clear_on_submit=True):
+        jenis = st.selectbox("Jenis biaya", options=["bensin", "hotel", "toll", "transportasi", "parkir"], index=0)
+        nominal_text = st.text_input("Nominal (contoh: 1200000 atau IDR 1.200.000)", value="")
+        submitted = st.form_submit_button("➕ Tambah", use_container_width=True)
+        if submitted:
+            nominal_val = idr_to_int(nominal_text)
+            if nominal_val <= 0:
+                st.warning("Nominal harus lebih dari 0.")
+            else:
+                st.session_state.reimburse_rows.append({"jenis": jenis, "nominal": nominal_val})
+                recompute_totals()
+                st.success(f"Berhasil menambah {jenis} sebesar {fmt_idr(nominal_val)}")
 
-# ===== Reimburse L–Q =====
-st.subheader("🧾 Reimburse")
-with st.form("reimburse_form", clear_on_submit=True):
-    jenis = st.selectbox("Jenis biaya", options=["bensin", "hotel", "toll", "transportasi", "parkir"], index=0)
-    nominal_text = st.text_input("Nominal (contoh: 1200000 atau IDR 1.200.000)", value="")
-    submitted = st.form_submit_button("➕ Tambah", use_container_width=True)
-    if submitted:
-        nominal_val = idr_to_int(nominal_text)
-        if nominal_val <= 0:
-            st.warning("Nominal harus lebih dari 0.")
-        else:
-            st.session_state.reimburse_rows.append({"jenis": jenis, "nominal": nominal_val})
-            recompute_totals()
-            st.success(f"Berhasil menambah {jenis} sebesar {fmt_idr(nominal_val)}")
+    # Tabel Reimburse
+    st.markdown("### Tabel Reimburse")
+    if not st.session_state.reimburse_rows:
+        st.info("Belum ada data reimburse.")
+    else:
+        header_cols = st.columns([0.7, 3, 3, 2])
+        header_cols[0].markdown("**No.**")
+        header_cols[1].markdown("**Jenis**")
+        header_cols[2].markdown("**Nominal**")
+        header_cols[3].markdown("**Aksi**")
 
-# Tabel Reimburse
-st.markdown("### Tabel Reimburse")
-if not st.session_state.reimburse_rows:
-    st.info("Belum ada data reimburse.")
-else:
-    header_cols = st.columns([0.7, 3, 3, 2])
-    header_cols[0].markdown("**No.**")
-    header_cols[1].markdown("**Jenis**")
-    header_cols[2].markdown("**Nominal**")
-    header_cols[3].markdown("**Aksi**")
+        for idx, row in enumerate(st.session_state.reimburse_rows, start=1):
+            c1, c2, c3, c4 = st.columns([0.7, 3, 3, 2])
+            c1.write(idx)
+            c2.write(row["jenis"].capitalize())
+            c3.write(fmt_idr(int(row["nominal"])))
+            if c4.button("Hapus", key=f"del_{idx}", use_container_width=True):
+                del st.session_state.reimburse_rows[idx - 1]
+                recompute_totals()
+                st.rerun()
 
-    for idx, row in enumerate(st.session_state.reimburse_rows, start=1):
-        c1, c2, c3, c4 = st.columns([0.7, 3, 3, 2])
-        c1.write(idx)
-        c2.write(row["jenis"].capitalize())
-        c3.write(fmt_idr(int(row["nominal"])))
-        if c4.button("Hapus", key=f"del_{idx}", use_container_width=True):
-            del st.session_state.reimburse_rows[idx - 1]
-            recompute_totals()
-            st.rerun()
+    # Total L–Q
+    recompute_totals()
+    totals = st.session_state.totals_LQ
+    st.markdown("### Total per Jenis (tersimpan ke value **L–Q**)")
+    tcols = st.columns(6)
+    tcols[0].metric("**L – Bensin**", fmt_idr(totals["L"]))
+    tcols[1].metric("**M – Hotel**", fmt_idr(totals["M"]))
+    tcols[2].metric("**N – Toll**", fmt_idr(totals["N"]))
+    tcols[3].metric("**O – Transportasi**", fmt_idr(totals["O"]))
+    tcols[4].metric("**P – Parkir**", fmt_idr(totals["P"]))
+    tcols[5].metric("**Q – Total Semua**", fmt_idr(totals["Q"]))
 
-# Total L–Q
-recompute_totals()
-totals = st.session_state.totals_LQ
-
-st.markdown("### Total per Jenis (tersimpan ke value **L–Q**)")
-tcols = st.columns(6)
-tcols[0].metric("**L – Bensin**", fmt_idr(totals["L"]))
-tcols[1].metric("**M – Hotel**", fmt_idr(totals["M"]))
-tcols[2].metric("**N – Toll**", fmt_idr(totals["N"]))
-tcols[3].metric("**O – Transportasi**", fmt_idr(totals["O"]))
-tcols[4].metric("**P – Parkir**", fmt_idr(totals["P"]))
-tcols[5].metric("**Q – Total Semua**", fmt_idr(totals["Q"]))
-
-# JSON A–Q (+ R,S)
-combined = {**st.session_state.parsed_AK, **{k: totals[k] for k in "LMNOPQ"}}
-st.divider()
-st.subheader("JSON (A–Q)")
-json_str = json.dumps(combined, ensure_ascii=False, indent=2)
-st.code(json_str, language="json")
-st.download_button("💾 Unduh JSON (A–Q)", data=json_str, file_name="trip_A_to_Q.json", mime="application/json", use_container_width=True, key="dl_json_aq")
+# (DISembunyikan) Hasil Ekstraksi A–K dan JSON A–Q
+# — permintaanmu: hide menu hasil ekstraksi & JSON, jadi tidak ditampilkan.
 
 # =========================
-# PDF Overlay 2 Halaman
+# Template PDF (auto-load, UI overlay disembunyikan)
 # =========================
-st.divider()
-# TIDAK menampilkan judul/menu overlay jika SHOW_OVERLAY_UI False
-if SHOW_OVERLAY_UI:
-    st.subheader("📄 PDF Overlay (2 Halaman)")
-
-# Template Halaman 1 (auto-load dari default path)
 DEFAULT_BG_PATH = os.environ.get("SPJ_BG_PATH", "assets/spj_blank.pdf")
 if not st.session_state.bg_template_bytes:
     try:
         if os.path.exists(DEFAULT_BG_PATH):
             with open(DEFAULT_BG_PATH, "rb") as f:
                 st.session_state.bg_template_bytes = f.read()
-        else:
-            if SHOW_OVERLAY_UI:
-                st.warning("Template halaman 1 belum ditemukan (assets/spj_blank.pdf). Unggah manual di bawah.")
     except Exception as e:
-        if SHOW_OVERLAY_UI:
-            st.warning(f"Tidak bisa membaca {DEFAULT_BG_PATH}: {e}")
+        pass
 
-# Template Halaman 2 (auto-load dari default path)
 DEFAULT_BG2_PATH = os.environ.get("SPJ_BG2_PATH", "assets/spj_blank2.pdf")
 if not st.session_state.bg_template2_bytes:
     try:
@@ -711,70 +668,8 @@ if not st.session_state.bg_template2_bytes:
             if os.path.exists(fallback):
                 with open(fallback, "rb") as f:
                     st.session_state.bg_template2_bytes = f.read()
-            else:
-                if SHOW_OVERLAY_UI:
-                    st.warning("Template halaman 2 belum ditemukan (assets/spj_blank2.pdf). Unggah manual di bawah.")
     except Exception as e:
-        if SHOW_OVERLAY_UI:
-            st.warning(f"Tidak bisa membaca {DEFAULT_BG2_PATH}: {e}")
-
-# ===== (DISEMBUNYIKAN) Upload template & Status template =====
-if SHOW_OVERLAY_UI:
-    tpl_up = st.file_uploader("Upload template PDF HALAMAN 1 (1 halaman)", type=["pdf"], key="upl_pg1")
-    if tpl_up is not None:
-        st.session_state.bg_template_bytes = tpl_up.read()
-        st.session_state.preview_pdf = None
-        st.success("Template Halaman 1 berhasil dimuat dari upload.")
-
-    tpl2_up = st.file_uploader("Upload template PDF HALAMAN 2 (1 halaman)", type=["pdf"], key="upl_pg2")
-    if tpl2_up is not None:
-        st.session_state.bg_template2_bytes = tpl2_up.read()
-        st.session_state.preview_pdf = None
-        st.success("Template Halaman 2 berhasil dimuat dari upload.")
-
-    st.write("### Status Template")
-    cst1, cst2 = st.columns(2)
-    with cst1:
-        ok1 = st.session_state.bg_template_bytes is not None
-        st.markdown(f"Halaman 1: {'✅ Siap' if ok1 else '❌ Belum'}")
-    with cst2:
-        ok2 = st.session_state.bg_template2_bytes is not None
-        st.markdown(f"Halaman 2: {'✅ Siap' if ok2 else '❌ Belum'}")
-
-# ===== (DISEMBUNYIKAN) Setting Koordinat — HALAMAN 2 =====
-if SHOW_OVERLAY_UI and not st.session_state.get("lock_page2_coords", False):
-    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + Q2_TB + DESC2 + R2 + S2 + CUSTOM)", expanded=True):
-        st.caption("Atur posisi teks di **halaman 2**. (Tips: isi X/Y ≠ 0 agar tercetak.)")
-        cs2 = st.session_state.coord_style_page2
-
-        order_keys = [f"{k}2" for k in list("ABCDEFGHI")] + \
-                     [f"{k}2" for k in list("KLMNOPQ")] + \
-                     ["Q2_TB", "DESC2", "CITY_TODAY", "A2_AGAIN", "G2_AGAIN", "R2", "S2"]
-
-        for chunk_start in range(0, len(order_keys), 3):
-            cols = st.columns(3)
-            for i, key in enumerate(order_keys[chunk_start:chunk_start+3]):
-                if key not in cs2:
-                    continue
-                with cols[i]:
-                    st.markdown(f"**{key}**")
-                    conf = cs2[key]
-                    conf["x"] = st.number_input(f"{key} · X", value=float(conf["x"]), step=1.0, key=f"x2_{key}")
-                    conf["y"] = st.number_input(f"{key} · Y", value=float(conf["y"]), step=1.0, key=f"y2_{key}")
-                    conf["size"] = st.number_input(f"{key} · Size", value=int(conf["size"]), min_value=6, max_value=72, step=1, key=f"s2_{key}")
-                    conf["bold"] = st.checkbox(f"{key} · Bold", value=bool(conf["bold"]), key=f"b2_{key}")
-                    conf["underline"] = st.checkbox(f"{key} · Underline", value=bool(conf["underline"]), key=f"u2_{key}")
-                    conf["align"] = st.selectbox(f"{key} · Align", options=["left", "center", "right"], index=["left","center","right"].index(conf["align"]), key=f"a2_{key}")
-                    conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
-                    conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
-
-# ===== TOMBOL PREVIEW & DOWNLOAD =====
-pcol1, pcol2 = st.columns(2)
-with pcol1:
-    do_preview = st.button("🔁 Preview PDF (2 Halaman)", use_container_width=True, key="btn_preview_2pages")
-with pcol2:
-    do_download = st.button("⬇️ Download PDF (2 Halaman)", use_container_width=True, key="btn_download_2pages")
-
+        pass
 
 # =========================
 # Items builders
@@ -923,56 +818,34 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
 
 
 # =========================
-# Generate Preview / Download
+# Generate & Download — single flow
 # =========================
-p1 = st.session_state.bg_template_bytes
-p2 = st.session_state.bg_template2_bytes
+st.divider()
+st.subheader("📄 Generate & Download PDF")
 
-# Tombol tetap tampil agar user bisa membuat PDF
-if p1 and p2:
-    if st.button("🔁 Preview PDF (2 Halaman)", use_container_width=True, key="btn_preview_2pages_top"):
+btn_generate = st.button("⚙️ Generate PDF (2 Halaman)", use_container_width=True, key="btn_generate_pdf")
+
+if btn_generate:
+    bg1 = st.session_state.bg_template_bytes
+    bg2 = st.session_state.bg_template2_bytes
+    if not bg1 or not bg2:
+        st.error("Template PDF belum tersedia. Pastikan file ada di `assets/spj_blank.pdf` dan `assets/spj_blank2.pdf`.")
+    else:
         items1 = _items_page1_from_state()
         items2 = _items_page2_from_state()
-        pdf_bytes = build_pdf_multi_pages([p1, p2], [items1, items2])
-        st.session_state.preview_pdf = pdf_bytes if pdf_bytes else None
-else:
-    st.info("Template PDF belum tersedia di path default. Pastikan file ada di `assets/spj_blank.pdf` dan `assets/spj_blank2.pdf`.")
+        pdf_bytes = build_pdf_multi_pages([bg1, bg2], [items1, items2])
+        if pdf_bytes:
+            st.session_state.preview_pdf = pdf_bytes
+            st.success("PDF berhasil digenerate. Silakan download.")
+        else:
+            st.warning("Gagal membuat PDF. Pastikan template & data sudah valid.")
 
-# Preview (pakai <embed>)
-if st.session_state.preview_pdf:
-    b64 = base64.b64encode(st.session_state.preview_pdf).decode("utf-8")
-    html = f"""
-    <div style="height: 920px; width: 100%; border: 1px solid #ddd;">
-      <embed type="application/pdf"
-             src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
-             width="100%" height="100%" />
-    </div>
-    """
-    components.html(html, height=940, scrolling=True)
-
-    # Info jumlah halaman
-    try:
-        from PyPDF2 import PdfReader
-        reader = PdfReader(io.BytesIO(st.session_state.preview_pdf))
-        st.caption(f"Preview berisi {len(reader.pages)} halaman.")
-    except Exception:
-        pass
-else:
-    st.info("Preview belum tersedia. Klik **🔁 Preview PDF (2 Halaman)** setelah template & data siap.")
-
-# Download
-if p1 and p2 and st.button("⬇️ Download PDF (2 Halaman)", use_container_width=True, key="btn_download_2pages_bottom"):
-    items1 = _items_page1_from_state()
-    items2 = _items_page2_from_state()
-    pdf_bytes = build_pdf_multi_pages([p1, p2], [items1, items2])
-    if pdf_bytes:
-        st.download_button(
-            "⬇️ Klik untuk mengunduh PDF (2 Halaman)",
-            data=pdf_bytes,
-            file_name="SPJ_A_to_Q_overlay_2hal.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-            key="dl_pdf_2pages"
-        )
-    else:
-        st.warning("Gagal membuat PDF. Pastikan template & data sudah valid.")
+if st.session_state.get("preview_pdf"):
+    st.download_button(
+        "⬇️ Download PDF (2 Halaman)",
+        data=st.session_state.preview_pdf,
+        file_name="SPJ_A_to_Q_overlay_2hal.pdf",
+        mime="application/pdf",
+        use_container_width=True,
+        key="dl_pdf_single"
+    )
