@@ -55,6 +55,9 @@ def day_diff_inclusive(D: Optional[str], E: Optional[str]) -> Optional[int]:
     return (d2.date() - d1.date()).days + 1
 
 
+# =========================
+# State init
+# =========================
 def ensure_states():
     if "parsed_AK" not in st.session_state:
         st.session_state.parsed_AK: Dict[str, str | None] = {}
@@ -62,19 +65,17 @@ def ensure_states():
         st.session_state.reimburse_rows: List[Dict] = []
     if "totals_LQ" not in st.session_state:
         st.session_state.totals_LQ: Dict[str, int] = {k: 0 for k in list("LMNOPQ")}
-    # PDF: template & preview
+    # PDF templates & preview
     if "bg_template_bytes" not in st.session_state:
         st.session_state.bg_template_bytes: Optional[bytes] = None
     if "bg_template2_bytes" not in st.session_state:
         st.session_state.bg_template2_bytes: Optional[bytes] = None
-    if "include_page2" not in st.session_state:
-        st.session_state.include_page2: bool = False
     if "preview_pdf" not in st.session_state:
         st.session_state.preview_pdf: Optional[bytes] = None
     # Override nilai (opsional)
     if "val_overrides" not in st.session_state:
         st.session_state.val_overrides: Dict[str, str] = {}
-    # Gaya/koordinat per value (align: "left|center|right", underline: bool, max_width)
+    # Koordinat halaman 1 (tetap dikunci; tidak ditampilkan di UI setting)
     if "coord_style" not in st.session_state:
         st.session_state.coord_style = {
             # A–E, J kiri (fixed). J kiri ditulis di (190,600,size=9) dengan nilai (E-D+1).
@@ -91,7 +92,7 @@ def ensure_states():
             "H": {"x": 124.0, "y": 78.0,  "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True,  "max_width": 135.0},
             "I": {"x": 124.0, "y": 88.0,  "size": 8,  "bold": True,  "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
 
-            # K–Q: X dari kanan & rata kanan. K–P fixed; Q fixed (sesuai instruksi).
+            # K–Q: X dari kanan & rata kanan. K–P fixed; Q fixed.
             "K": {"x": 260.0, "y": 520.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "L": {"x": 260.0, "y": 313.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "M": {"x": 260.0, "y": 299.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
@@ -100,7 +101,7 @@ def ensure_states():
             "P": {"x": 260.0, "y": 260.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "Q": {"x": 260.0, "y": 227.0, "size": 9,  "bold": True,  "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
 
-            # === Tambahan: R & S (atasan) ===
+            # R & S (atasan) — style halaman 1 (fixed)
             # R: x=281, y=88, bold, center, underline, size=8, no-wrap
             "R": {"x": 281.0, "y": 88.0, "size": 8, "bold": True, "underline": True,
                   "fmt": "raw", "from_right": False, "align": "center", "locked": True},
@@ -108,7 +109,8 @@ def ensure_states():
             "S": {"x": 281.0, "y": 78.0, "size": 7, "bold": False, "underline": False,
                   "fmt": "raw", "from_right": False, "align": "center", "locked": True, "max_width": 135.0},
         }
-    # Item duplikasi (hard-coded)
+
+    # Item duplikasi (hard-coded) — halaman 1
     if "extra_items" not in st.session_state:
         st.session_state.extra_items = {
             # K kedua @ (Xr=260, Y=534)
@@ -119,6 +121,14 @@ def ensure_states():
             "A_DUP": {"key": "A", "x": 439.0, "y": 88.0,  "size": 8, "bold": True,  "underline": True,  "from_right": False, "align": "center"},
             # Duplikat Q @ (Xr=260, Y=183), size 9, bold, right  ==> NILAI = Q + K
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
+        }
+
+    # Koordinat HALAMAN 2 (editable di UI)
+    # Fokus ke penempatan R2 & S2 (nama & jabatan atasan di halaman 2).
+    if "coord_style_page2" not in st.session_state:
+        st.session_state.coord_style_page2 = {
+            "R2": {"x": 281.0, "y": 88.0, "size": 8, "bold": True,  "underline": True,  "from_right": False, "align": "center"},
+            "S2": {"x": 281.0, "y": 78.0, "size": 7,  "bold": False, "underline": False, "from_right": False, "align": "center", "max_width": 135.0},
         }
 
 
@@ -209,15 +219,8 @@ def get_value_for_key(key: str) -> str:
 
 
 # =========================
-# PDF Builder
+# PDF rendering utils
 # =========================
-def build_pdf_multi(background_pdf_bytes: bytes, items: List[Dict[str, object]]) -> bytes:
-    """
-    (Halaman tunggal) Gambar overlay items di atas background.
-    """
-    return _render_one_page(background_pdf_bytes, items)
-
-
 def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]) -> bytes:
     """
     Render satu halaman overlay + merge dengan background.
@@ -246,10 +249,9 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(page_w, page_h))
 
-    from reportlab.pdfbase.pdfmetrics import stringWidth
-
     def wrap_text_by_space(text: str, font_name: str, font_size: float, max_width: float) -> List[str]:
         """Bungkus teks per spasi agar tiap baris <= max_width. Jika satu kata > max_width, pecah paksa."""
+        from reportlab.pdfbase.pdfmetrics import stringWidth as W
         words = text.split()
         if not words:
             return []
@@ -257,7 +259,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         current = ""
 
         def w(s: str) -> float:
-            return stringWidth(s, font_name, font_size)
+            return W(s, font_name, font_size)
 
         for word in words:
             candidate = word if not current else f"{current} {word}"
@@ -288,7 +290,8 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
 
     def draw_underlined_text(text: str, x_anchor: float, y: float, align: str, font_name: str, font_size: float):
         """Garis underline di bawah teks sesuai alignment."""
-        width = stringWidth(text, font_name, font_size)
+        from reportlab.pdfbase.pdfmetrics import stringWidth as W
+        width = W(text, font_name, font_size)
         if align == "right":
             x0 = x_anchor - width
         elif align == "center":
@@ -325,10 +328,9 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         # Anchor X
         x_anchor = (page_w - x_in) if from_right else x_in
 
-        # G/H/S wrapping center
-        if key in ["G", "H", "S"] and align == "center" and max_width > 0:
-            mw = max_width
-            lines = wrap_text_by_space(text, font, size, mw)
+        # Wrapping untuk key dengan align center + max_width
+        if align == "center" and max_width > 0:
+            lines = wrap_text_by_space(text, font, size, max_width)
             line_height = size * 1.2
             y_cursor = y
             for ln in lines:
@@ -373,7 +375,6 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
 def build_pdf_multi_pages(background_pages: List[bytes], items_per_page: List[List[Dict[str, object]]]) -> bytes:
     """
     (Multi-halaman) Render setiap halaman dengan background & items masing-masing, gabungkan ke satu PDF.
-    Panjang background_pages harus sama dengan items_per_page; halaman yang background-nya None akan dilewati.
     """
     from PyPDF2 import PdfReader, PdfWriter
     writer = PdfWriter()
@@ -402,19 +403,18 @@ def build_pdf_multi_pages(background_pages: List[bytes], items_per_page: List[Li
 # =========================
 # UI
 # =========================
-st.set_page_config(page_title="Trip HTML Parser (A–Q) + PDF Overlay (Multi-Page)", page_icon="🧭", layout="wide")
+st.set_page_config(page_title="Trip HTML Parser (A–Q) + PDF Overlay (2 Halaman)", page_icon="🧭", layout="wide")
 ensure_states()
 
 st.title("🧭 Trip HTML Parser (A–Q)")
-st.caption("Tempel/unggah HTML → A–K → Reimburse → L–Q → PDF Overlay (A–Q) • + Halaman 2 (opsional).")
+st.caption("Tempel/unggah HTML → A–K → Reimburse → L–Q → PDF 2 Halaman (otomatis).")
 
 with st.expander("Cara pakai (singkat)", expanded=False):
     st.markdown(
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
-        "- **Langkah 2**: Isi **Reimburse** untuk menghasilkan L–Q.\n"
-        "- **Langkah 3**: Siapkan **template PDF** (otomatis dari `assets/spj_blank.pdf` & `assets/spj_blank2.pdf` atau upload manual).\n"
-        "- **Langkah 4**: A–E, J fixed; K–Q: X dari kanan & rata kanan (Q & duplikat Q diset). G/H rata tengah 135 pt; I & A_DUP rata tengah tanpa wrap + underline. R/S (atasan) sesuai koordinat yang ditetapkan.\n"
-        "- **Langkah 5**: Preview & Download (bisa multi-halaman)."
+        "- **Langkah 2**: Isi **Data Atasan (R/S)** dan **Reimburse** untuk menghasilkan L–Q.\n"
+        "- **Langkah 3**: Siapkan **template PDF** (`assets/spj_blank.pdf` & `assets/spj_blank2.pdf`) atau upload manual.\n"
+        "- **Langkah 4**: Preview & Download — otomatis **2 halaman**."
     )
 
 # ===== Input HTML =====
@@ -542,12 +542,12 @@ st.code(json_str, language="json")
 st.download_button("💾 Unduh JSON (A–Q)", data=json_str, file_name="trip_A_to_Q.json", mime="application/json", use_container_width=True)
 
 # =========================
-# PDF Overlay (A–Q) + Page 2
+# PDF Overlay 2 Halaman
 # =========================
 st.divider()
-st.subheader("📄 PDF Overlay (A–Q) • Multi-Page")
+st.subheader("📄 PDF Overlay (2 Halaman)")
 
-# Template Page 1
+# Template Halaman 1
 DEFAULT_BG_PATH = os.environ.get("SPJ_BG_PATH", "assets/spj_blank.pdf")
 if not st.session_state.bg_template_bytes:
     try:
@@ -555,6 +555,8 @@ if not st.session_state.bg_template_bytes:
             with open(DEFAULT_BG_PATH, "rb") as f:
                 st.session_state.bg_template_bytes = f.read()
             st.info(f"Template halaman 1 di-load dari: {DEFAULT_BG_PATH}")
+        else:
+            st.warning("Template halaman 1 belum ditemukan (assets/spj_blank.pdf). Unggah manual di bawah.")
     except Exception as e:
         st.warning(f"Tidak bisa membaca {DEFAULT_BG_PATH}: {e}")
 
@@ -564,7 +566,7 @@ if tpl_up is not None:
     st.session_state.preview_pdf = None
     st.success("Template Halaman 1 berhasil dimuat dari upload.")
 
-# Template Page 2
+# Template Halaman 2
 DEFAULT_BG2_PATH = os.environ.get("SPJ_BG2_PATH", "assets/spj_blank2.pdf")
 if not st.session_state.bg_template2_bytes:
     try:
@@ -572,55 +574,70 @@ if not st.session_state.bg_template2_bytes:
             with open(DEFAULT_BG2_PATH, "rb") as f:
                 st.session_state.bg_template2_bytes = f.read()
             st.info(f"Template halaman 2 di-load dari: {DEFAULT_BG2_PATH}")
+        else:
+            # fallback ke file tanpa ekstensi (jaga-jaga)
+            fallback = "assets/spj_blank2"
+            if os.path.exists(fallback):
+                with open(fallback, "rb") as f:
+                    st.session_state.bg_template2_bytes = f.read()
+                st.info(f"Template halaman 2 di-load dari: {fallback}")
+            else:
+                st.warning("Template halaman 2 belum ditemukan (assets/spj_blank2.pdf). Unggah manual di bawah.")
     except Exception as e:
         st.warning(f"Tidak bisa membaca {DEFAULT_BG2_PATH}: {e}")
 
-tpl2_up = st.file_uploader("Upload template PDF HALAMAN 2 (opsional, 1 halaman)", type=["pdf"], key="upl_pg2")
+tpl2_up = st.file_uploader("Upload template PDF HALAMAN 2 (1 halaman)", type=["pdf"], key="upl_pg2")
 if tpl2_up is not None:
     st.session_state.bg_template2_bytes = tpl2_up.read()
     st.session_state.preview_pdf = None
     st.success("Template Halaman 2 berhasil dimuat dari upload.")
 
-# Toggle Page 2
-st.session_state.include_page2 = st.checkbox("Sertakan Halaman 2 (assets/spj_blank2.pdf atau upload)", value=st.session_state.include_page2)
+# Status template
+st.write("### Status Template")
+cst1, cst2 = st.columns(2)
+with cst1:
+    ok1 = st.session_state.bg_template_bytes is not None
+    st.markdown(f"Halaman 1: {'✅ Siap' if ok1 else '❌ Belum'}")
+with cst2:
+    ok2 = st.session_state.bg_template2_bytes is not None
+    st.markdown(f"Halaman 2: {'✅ Siap' if ok2 else '❌ Belum'}")
 
-# Panel koordinat (F editable; lainnya locked)
-with st.expander("📍 Koordinat & Style", expanded=True):
-    st.markdown("**Identitas (A–E, J, R, S) – fixed (halaman 1)**")
-    fixed_keys = ["A", "B", "C", "D", "E", "J", "R", "S"]
-    fcols = st.columns(len(fixed_keys))
-    for i, k in enumerate(fixed_keys):
-        cs = st.session_state.coord_style[k]
-        with fcols[i]:
-            st.number_input(f"{k} · X", value=float(cs["x"]), step=0.5, disabled=True, key=f"fx_{k}")
-            st.number_input(f"{k} · Y", value=float(cs["y"]), step=0.5, disabled=True, key=f"fy_{k}")
-            st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, disabled=True, key=f"fs_{k}")
+# ===== Setting Koordinat — HALAMAN 2 SAJA =====
+with st.expander("📍 Koordinat Halaman 2 (R2 & S2)", expanded=True):
+    st.caption("Atur posisi teks di **halaman 2**. Halaman 1 diset tetap (sesuai format).")
+    cs2 = st.session_state.coord_style_page2
+    # R2
+    r2 = cs2["R2"]
+    c1, c2, c3, c4, c5 = st.columns(5)
+    with c1:
+        r2["x"] = st.number_input("R2 · X (dari kiri)", value=float(r2["x"]), step=1.0)
+    with c2:
+        r2["y"] = st.number_input("R2 · Y", value=float(r2["y"]), step=1.0)
+    with c3:
+        r2["size"] = st.number_input("R2 · Size", value=int(r2["size"]), min_value=6, max_value=72, step=1)
+    with c4:
+        r2["bold"] = st.checkbox("R2 · Bold", value=bool(r2["bold"]))
+    with c5:
+        r2["underline"] = st.checkbox("R2 · Underline", value=bool(r2["underline"]))
 
-    st.markdown("**Info Lain (F–I) – F editable; G/H/I fixed (halaman 1)**")
-    k = "F"
-    cs = st.session_state.coord_style[k]
-    f1, f2, f3, f4 = st.columns(4)
-    with f1:
-        st.session_state.coord_style[k]["x"] = st.number_input(f"{k} · X (dari kiri)", value=float(cs["x"]), step=1.0, key=f"x_{k}")
-    with f2:
-        st.session_state.coord_style[k]["y"] = st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}")
-    with f3:
-        st.session_state.coord_style[k]["size"] = st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}")
-    with f4:
-        st.session_state.coord_style[k]["bold"] = st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}")
+    st.markdown("---")
+    # S2
+    s2 = cs2["S2"]
+    d1, d2, d3, d4, d5 = st.columns(5)
+    with d1:
+        s2["x"] = st.number_input("S2 · X (dari kiri)", value=float(s2["x"]), step=1.0)
+    with d2:
+        s2["y"] = st.number_input("S2 · Y", value=float(s2["y"]), step=1.0)
+    with d3:
+        s2["size"] = st.number_input("S2 · Size", value=int(s2["size"]), min_value=6, max_value=72, step=1)
+    with d4:
+        s2["max_width"] = st.number_input("S2 · Max width (wrap)", value=float(s2.get("max_width", 135.0)), step=1.0)
+    with d5:
+        s2["bold"] = st.checkbox("S2 · Bold", value=bool(s2["bold"]))
+    # Underline untuk S2 opsional
+    s2["underline"] = s2.get("underline", False)
 
-    st.markdown("**Nominal (K–Q) – X dari kanan & rata kanan (semua dikunci, halaman 1)**")
-    group_kq = ["K", "L", "M", "N", "O", "P", "Q"]
-    cols_kq = st.columns(7)
-    for i, k in enumerate(group_kq):
-        cs = st.session_state.coord_style[k]
-        with cols_kq[i]:
-            st.number_input(f"{k} · X dari kanan", value=float(cs["x"]), step=1.0, key=f"x_{k}_right", disabled=True)
-            st.number_input(f"{k} · Y", value=float(cs["y"]), step=1.0, key=f"y_{k}", disabled=True)
-            st.number_input(f"{k} · Size", value=int(cs["size"]), step=1, min_value=6, max_value=72, key=f"s_{k}", disabled=True)
-            st.checkbox(f"{k} · Bold", value=bool(cs["bold"]), key=f"b_{k}", disabled=True)
-
-# Override nilai (opsional)
+# Override nilai (opsional) — ikutkan R & S
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
     cols = st.columns(4)
     keys1 = list("ABCDEFGHIJRS")
@@ -636,11 +653,14 @@ with st.expander("✏️ Override Nilai (opsional)", expanded=False):
 # Tombol preview & download
 pcol1, pcol2 = st.columns(2)
 with pcol1:
-    do_preview = st.button("🔁 Preview PDF", use_container_width=True)
+    do_preview = st.button("🔁 Preview PDF (2 Halaman)", use_container_width=True)
 with pcol2:
-    do_download = st.button("⬇️ Download PDF", use_container_width=True)
+    do_download = st.button("⬇️ Download PDF (2 Halaman)", use_container_width=True)
 
 
+# =========================
+# Items builders
+# =========================
 def _items_page1_from_state() -> List[Dict[str, object]]:
     items: List[Dict[str, object]] = []
     cs = st.session_state.coord_style
@@ -677,8 +697,7 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
                 item["max_width"] = float(style.get("max_width", 135.0))
             items.append(item)
 
-    # 2b) R & S
-    # R: center, underline, no-wrap
+    # 2b) R & S (halaman 1)
     r_style = cs["R"]
     r_txt = (ak.get("R") or "").strip()
     if r_txt:
@@ -689,7 +708,6 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
             "from_right": r_style["from_right"], "align": r_style["align"]
         })
 
-    # S: center, wrap max_width = 135
     s_style = cs["S"]
     s_txt = (ak.get("S") or "").strip()
     if s_txt:
@@ -746,52 +764,53 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
 
 def _items_page2_from_state() -> List[Dict[str, object]]:
     """
-    Items untuk halaman 2 (sementara: contoh memuat R & S di posisi yang sama).
-    Silakan modifikasi koordinat sesuai layout spj_blank2 bila berbeda.
+    Items untuk halaman 2 — fokus R2 & S2 (nama/jabatan atasan) dengan koordinat editable.
+    Tambahkan elemen lain sesuai kebutuhan layout spj_blank2 di sini.
     """
     items: List[Dict[str, object]] = []
-    cs = st.session_state.coord_style
+    cs2 = st.session_state.coord_style_page2
     ak = st.session_state.parsed_AK or {}
 
-    # Misal: tampilkan R & S juga di halaman 2 pada posisi yang sama (bisa diubah nanti)
-    r_style = cs["R"]
+    # R2
+    r2 = cs2["R2"]
     r_txt = (ak.get("R") or "").strip()
     if r_txt:
         items.append({
-            "key": "R", "text": r_txt,
-            "x": r_style["x"], "y": r_style["y"],
-            "size": r_style["size"], "bold": r_style["bold"], "underline": r_style["underline"],
-            "from_right": r_style["from_right"], "align": r_style["align"]
+            "key": "R2", "text": r_txt,
+            "x": float(r2["x"]), "y": float(r2["y"]),
+            "size": int(r2["size"]), "bold": bool(r2["bold"]), "underline": bool(r2["underline"]),
+            "from_right": bool(r2["from_right"]), "align": str(r2["align"])
         })
 
-    s_style = cs["S"]
+    # S2 (dengan wrap)
+    s2 = cs2["S2"]
     s_txt = (ak.get("S") or "").strip()
     if s_txt:
         items.append({
-            "key": "S", "text": s_txt,
-            "x": s_style["x"], "y": s_style["y"],
-            "size": s_style["size"], "bold": s_style["bold"], "underline": s_style["underline"],
-            "from_right": s_style["from_right"], "align": s_style["align"],
-            "max_width": float(s_style.get("max_width", 135.0))
+            "key": "S2", "text": s_txt,
+            "x": float(s2["x"]), "y": float(s2["y"]),
+            "size": int(s2["size"]), "bold": bool(s2["bold"]), "underline": bool(s2["underline"]),
+            "from_right": bool(s2["from_right"]), "align": str(s2["align"]),
+            "max_width": float(s2.get("max_width", 135.0))
         })
 
-    # Tambahkan elemen lain khusus halaman 2 di sini (mis. tanda tangan, tanggal, dll)
     return items
 
 
-# Generate preview
+# =========================
+# Generate Preview
+# =========================
 if do_preview:
     bg1 = st.session_state.bg_template_bytes
-    bg2 = st.session_state.bg_template2_bytes if st.session_state.include_page2 else None
+    bg2 = st.session_state.bg_template2_bytes
 
-    if not bg1:
-        st.warning("Template PDF Halaman 1 belum tersedia. Upload file atau letakkan di assets/spj_blank.pdf.")
+    if not bg1 or not bg2:
+        st.warning("Template halaman 1 dan/atau halaman 2 belum tersedia. Pastikan kedua file ada atau upload manual.")
+        st.session_state.preview_pdf = None
     else:
         items1 = _items_page1_from_state()
-        items2 = _items_page2_from_state() if bg2 else []
-        backgrounds = [bg1] + ([bg2] if bg2 else [])
-        items_pages = [items1] + ([items2] if bg2 else [])
-        pdf_bytes = build_pdf_multi_pages(backgrounds, items_pages)
+        items2 = _items_page2_from_state()
+        pdf_bytes = build_pdf_multi_pages([bg1, bg2], [items1, items2])
         st.session_state.preview_pdf = pdf_bytes if pdf_bytes else None
 
 # Preview (Chrome-safe; pakai <embed>)
@@ -801,35 +820,43 @@ if st.session_state.preview_pdf:
     <div style="height: 920px; width: 100%; border: 1px solid #ddd;">
       <embed type="application/pdf"
              src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
-             width="100%" height="100%" />
+             width="100%" height="100%"/>
       <p style="padding:8px;font-family:sans-serif;">
         Jika PDF tidak tampil, Anda bisa
-        <a download="SPJ_A_to_Q_overlay.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
+        <a download="SPJ_A_to_Q_overlay_2hal.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
       </p>
     </div>
     """
     components.html(html, height=940, scrolling=True)
-else:
-    st.info("Preview belum tersedia. Klik **🔁 Preview PDF** setelah template & data siap.")
 
+    # Info jumlah halaman
+    try:
+        from PyPDF2 import PdfReader
+        reader = PdfReader(io.BytesIO(st.session_state.preview_pdf))
+        st.caption(f"Preview berisi {len(reader.pages)} halaman.")
+    except Exception:
+        pass
+else:
+    st.info("Preview belum tersedia. Klik **🔁 Preview PDF (2 Halaman)** setelah template & data siap.")
+
+# =========================
 # Download
+# =========================
 if do_download:
     bg1 = st.session_state.bg_template_bytes
-    bg2 = st.session_state.bg_template2_bytes if st.session_state.include_page2 else None
+    bg2 = st.session_state.bg_template2_bytes
 
-    if not bg1:
-        st.warning("Template PDF Halaman 1 belum tersedia. Upload file atau letakkan di assets/spj_blank.pdf.")
+    if not bg1 or not bg2:
+        st.warning("Template halaman 1 dan/atau halaman 2 belum tersedia. Pastikan kedua file ada atau upload manual.")
     else:
         items1 = _items_page1_from_state()
-        items2 = _items_page2_from_state() if bg2 else []
-        backgrounds = [bg1] + ([bg2] if bg2 else [])
-        items_pages = [items1] + ([items2] if bg2 else [])
-        pdf_bytes = build_pdf_multi_pages(backgrounds, items_pages)
+        items2 = _items_page2_from_state()
+        pdf_bytes = build_pdf_multi_pages([bg1, bg2], [items1, items2])
         if pdf_bytes:
             st.download_button(
-                "⬇️ Klik untuk mengunduh PDF",
+                "⬇️ Klik untuk mengunduh PDF (2 Halaman)",
                 data=pdf_bytes,
-                file_name="SPJ_A_to_Q_overlay.pdf",
+                file_name="SPJ_A_to_Q_overlay_2hal.pdf",
                 mime="application/pdf",
                 use_container_width=True,
             )
