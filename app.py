@@ -75,7 +75,8 @@ def ensure_states():
     # Override nilai (opsional)
     if "val_overrides" not in st.session_state:
         st.session_state.val_overrides: Dict[str, str] = {}
-    # Koordinat halaman 1 (tetap dikunci; tidak ditampilkan di UI setting)
+
+    # Koordinat HALAMAN 1 (fixed; tidak muncul di UI)
     if "coord_style" not in st.session_state:
         st.session_state.coord_style = {
             # A–E, J kiri (fixed). J kiri ditulis di (190,600,size=9) dengan nilai (E-D+1).
@@ -92,7 +93,7 @@ def ensure_states():
             "H": {"x": 124.0, "y": 78.0,  "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True,  "max_width": 135.0},
             "I": {"x": 124.0, "y": 88.0,  "size": 8,  "bold": True,  "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
 
-            # K–Q: X dari kanan & rata kanan. K–P fixed; Q fixed.
+            # K–Q: X dari kanan & rata kanan (fixed).
             "K": {"x": 260.0, "y": 520.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "L": {"x": 260.0, "y": 313.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
             "M": {"x": 260.0, "y": 299.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
@@ -102,34 +103,46 @@ def ensure_states():
             "Q": {"x": 260.0, "y": 227.0, "size": 9,  "bold": True,  "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
 
             # R & S (atasan) — style halaman 1 (fixed)
-            # R: x=281, y=88, bold, center, underline, size=8, no-wrap
-            "R": {"x": 281.0, "y": 88.0, "size": 8, "bold": True, "underline": True,
-                  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
-            # S: x=281, y=78, center, size=7, wrap max 135pt
-            "S": {"x": 281.0, "y": 78.0, "size": 7, "bold": False, "underline": False,
-                  "fmt": "raw", "from_right": False, "align": "center", "locked": True, "max_width": 135.0},
+            "R": {"x": 281.0, "y": 88.0, "size": 8, "bold": True, "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
+            "S": {"x": 281.0, "y": 78.0, "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True, "max_width": 135.0},
         }
 
     # Item duplikasi (hard-coded) — halaman 1
     if "extra_items" not in st.session_state:
         st.session_state.extra_items = {
-            # K kedua @ (Xr=260, Y=534)
             "K_DUP": {"key": "K", "x": 260.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
-            # J kanan @ (Xr=110, Y=534) -> pakai J hasil parsing (digit)
             "J_RIGHT": {"key": "J", "x": 110.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
-            # Duplikat A @ (X=439, Y=88), size 8, bold + underline, center, NO wrap
             "A_DUP": {"key": "A", "x": 439.0, "y": 88.0,  "size": 8, "bold": True,  "underline": True,  "from_right": False, "align": "center"},
-            # Duplikat Q @ (Xr=260, Y=183), size 9, bold, right  ==> NILAI = Q + K
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
         }
 
-    # Koordinat HALAMAN 2 (editable di UI)
-    # Fokus ke penempatan R2 & S2 (nama & jabatan atasan di halaman 2).
+    # Koordinat HALAMAN 2 (editable) — SEMUA VALUE
     if "coord_style_page2" not in st.session_state:
-        st.session_state.coord_style_page2 = {
-            "R2": {"x": 281.0, "y": 88.0, "size": 8, "bold": True,  "underline": True,  "from_right": False, "align": "center"},
-            "S2": {"x": 281.0, "y": 78.0, "size": 7,  "bold": False, "underline": False, "from_right": False, "align": "center", "max_width": 135.0},
+        # Default (0,0) supaya tidak tercetak sampai diset; untuk K..Q default align right + from_right=True
+        cs2 = {}
+        # A..I
+        base_defaults = {
+            "A2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
+            "B2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
+            "C2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
+            "D2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
+            "E2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
+            "F2": {"size": 10,"bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
+            "G2": {"size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0},
+            "H2": {"size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0},
+            "I2": {"size": 8, "bold": True,  "underline": True,  "align": "center", "from_right": False, "max_width": 0.0},
         }
+        # K..Q right-anchored by default
+        for k in list("ABCDEFGHI"):
+            key = f"{k}2"
+            d = base_defaults[key]
+            cs2[key] = {"x": 0.0, "y": 0.0, **d}
+        for k in list("KLMNOPQ"):
+            cs2[f"{k}2"] = {"x": 0.0, "y": 0.0, "size": 9, "bold": (k == "Q"), "underline": False, "align": "right", "from_right": True, "max_width": 0.0}
+        # R2/S2
+        cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True,  "underline": True,  "align": "center", "from_right": False, "max_width": 0.0}
+        cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
+        st.session_state.coord_style_page2 = cs2
 
 
 def recompute_totals():
@@ -251,7 +264,6 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
 
     def wrap_text_by_space(text: str, font_name: str, font_size: float, max_width: float) -> List[str]:
         """Bungkus teks per spasi agar tiap baris <= max_width. Jika satu kata > max_width, pecah paksa."""
-        from reportlab.pdfbase.pdfmetrics import stringWidth as W
         words = text.split()
         if not words:
             return []
@@ -259,7 +271,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         current = ""
 
         def w(s: str) -> float:
-            return W(s, font_name, font_size)
+            return stringWidth(s, font_name, font_size)
 
         for word in words:
             candidate = word if not current else f"{current} {word}"
@@ -290,8 +302,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
 
     def draw_underlined_text(text: str, x_anchor: float, y: float, align: str, font_name: str, font_size: float):
         """Garis underline di bawah teks sesuai alignment."""
-        from reportlab.pdfbase.pdfmetrics import stringWidth as W
-        width = W(text, font_name, font_size)
+        width = stringWidth(text, font_name, font_size)
         if align == "right":
             x0 = x_anchor - width
         elif align == "center":
@@ -328,15 +339,24 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         # Anchor X
         x_anchor = (page_w - x_in) if from_right else x_in
 
-        # Wrapping untuk key dengan align center + max_width
-        if align == "center" and max_width > 0:
+        # Wrapping generic: jika max_width > 0 -> bungkus & gambar per alignment
+        if max_width > 0:
             lines = wrap_text_by_space(text, font, size, max_width)
             line_height = size * 1.2
             y_cursor = y
             for ln in lines:
-                c.drawCentredString(x_anchor, y_cursor, ln)
-                if underline:
-                    draw_underlined_text(ln, x_anchor, y_cursor, "center", font, size)
+                if align == "right":
+                    c.drawRightString(x_anchor, y_cursor, ln)
+                    if underline:
+                        draw_underlined_text(ln, x_anchor, y_cursor, "right", font, size)
+                elif align == "center":
+                    c.drawCentredString(x_anchor, y_cursor, ln)
+                    if underline:
+                        draw_underlined_text(ln, x_anchor, y_cursor, "center", font, size)
+                else:
+                    c.drawString(x_anchor, y_cursor, ln)
+                    if underline:
+                        draw_underlined_text(ln, x_anchor, y_cursor, "left", font, size)
                 y_cursor -= line_height
         else:
             if align == "right":
@@ -414,7 +434,8 @@ with st.expander("Cara pakai (singkat)", expanded=False):
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
         "- **Langkah 2**: Isi **Data Atasan (R/S)** dan **Reimburse** untuk menghasilkan L–Q.\n"
         "- **Langkah 3**: Siapkan **template PDF** (`assets/spj_blank.pdf` & `assets/spj_blank2.pdf`) atau upload manual.\n"
-        "- **Langkah 4**: Preview & Download — otomatis **2 halaman**."
+        "- **Langkah 4**: Atur **koordinat HALAMAN 2** (A2..Q2 + R2 + S2) sesuai layout.\n"
+        "- **Langkah 5**: Preview & Download — otomatis **2 halaman**."
     )
 
 # ===== Input HTML =====
@@ -602,40 +623,31 @@ with cst2:
     ok2 = st.session_state.bg_template2_bytes is not None
     st.markdown(f"Halaman 2: {'✅ Siap' if ok2 else '❌ Belum'}")
 
-# ===== Setting Koordinat — HALAMAN 2 SAJA =====
-with st.expander("📍 Koordinat Halaman 2 (R2 & S2)", expanded=True):
-    st.caption("Atur posisi teks di **halaman 2**. Halaman 1 diset tetap (sesuai format).")
+# ===== Setting Koordinat — HALAMAN 2 (SEMUA VALUE) =====
+with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + R2 + S2)", expanded=True):
+    st.caption("Atur posisi teks di **halaman 2**. (Tips: isi X/Y ≠ 0 agar tercetak.)")
     cs2 = st.session_state.coord_style_page2
-    # R2
-    r2 = cs2["R2"]
-    c1, c2, c3, c4, c5 = st.columns(5)
-    with c1:
-        r2["x"] = st.number_input("R2 · X (dari kiri)", value=float(r2["x"]), step=1.0)
-    with c2:
-        r2["y"] = st.number_input("R2 · Y", value=float(r2["y"]), step=1.0)
-    with c3:
-        r2["size"] = st.number_input("R2 · Size", value=int(r2["size"]), min_value=6, max_value=72, step=1)
-    with c4:
-        r2["bold"] = st.checkbox("R2 · Bold", value=bool(r2["bold"]))
-    with c5:
-        r2["underline"] = st.checkbox("R2 · Underline", value=bool(r2["underline"]))
 
-    st.markdown("---")
-    # S2
-    s2 = cs2["S2"]
-    d1, d2, d3, d4, d5 = st.columns(5)
-    with d1:
-        s2["x"] = st.number_input("S2 · X (dari kiri)", value=float(s2["x"]), step=1.0)
-    with d2:
-        s2["y"] = st.number_input("S2 · Y", value=float(s2["y"]), step=1.0)
-    with d3:
-        s2["size"] = st.number_input("S2 · Size", value=int(s2["size"]), min_value=6, max_value=72, step=1)
-    with d4:
-        s2["max_width"] = st.number_input("S2 · Max width (wrap)", value=float(s2.get("max_width", 135.0)), step=1.0)
-    with d5:
-        s2["bold"] = st.checkbox("S2 · Bold", value=bool(s2["bold"]))
-    # Underline untuk S2 opsional
-    s2["underline"] = s2.get("underline", False)
+    # urutan tampilan
+    order_keys = [f"{k}2" for k in list("ABCDEFGHI")] + [f"{k}2" for k in list("KLMNOPQ")] + ["R2", "S2"]
+
+    # grid 3 kolom per baris
+    for chunk_start in range(0, len(order_keys), 3):
+        cols = st.columns(3)
+        for i, key in enumerate(order_keys[chunk_start:chunk_start+3]):
+            if key not in cs2:
+                continue
+            with cols[i]:
+                st.markdown(f"**{key}**")
+                conf = cs2[key]
+                conf["x"] = st.number_input(f"{key} · X", value=float(conf["x"]), step=1.0, key=f"x2_{key}")
+                conf["y"] = st.number_input(f"{key} · Y", value=float(conf["y"]), step=1.0, key=f"y2_{key}")
+                conf["size"] = st.number_input(f"{key} · Size", value=int(conf["size"]), min_value=6, max_value=72, step=1, key=f"s2_{key}")
+                conf["bold"] = st.checkbox(f"{key} · Bold", value=bool(conf["bold"]), key=f"b2_{key}")
+                conf["underline"] = st.checkbox(f"{key} · Underline", value=bool(conf["underline"]), key=f"u2_{key}")
+                conf["align"] = st.selectbox(f"{key} · Align", options=["left", "center", "right"], index=["left","center","right"].index(conf["align"]), key=f"a2_{key}")
+                conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
+                conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
 
 # Override nilai (opsional) — ikutkan R & S
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
@@ -764,34 +776,45 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
 
 def _items_page2_from_state() -> List[Dict[str, object]]:
     """
-    Items untuk halaman 2 — fokus R2 & S2 (nama/jabatan atasan) dengan koordinat editable.
-    Tambahkan elemen lain sesuai kebutuhan layout spj_blank2 di sini.
+    Items untuk halaman 2 — SEMUA VALUE dari coord_style_page2.
+    Base value diambil dari A..Q + R/S (tanpa '2').
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
-    ak = st.session_state.parsed_AK or {}
 
-    # R2
-    r2 = cs2["R2"]
-    r_txt = (ak.get("R") or "").strip()
-    if r_txt:
-        items.append({
-            "key": "R2", "text": r_txt,
-            "x": float(r2["x"]), "y": float(r2["y"]),
-            "size": int(r2["size"]), "bold": bool(r2["bold"]), "underline": bool(r2["underline"]),
-            "from_right": bool(r2["from_right"]), "align": str(r2["align"])
-        })
+    # iterate semua key di cs2
+    for key, style in cs2.items():
+        # Map A2->A, ..., Q2->Q, R2->R, S2->S
+        base_key = key[:-1] if key.endswith("2") else key
+        base_key = base_key.upper()
 
-    # S2 (dengan wrap)
-    s2 = cs2["S2"]
-    s_txt = (ak.get("S") or "").strip()
-    if s_txt:
+        # Ambil teks dari base value:
+        # - untuk A..Q / R / S gunakan get_value_for_key(base_key)
+        # - skip jika X/Y = 0 agar tidak tercetak accidental
+        x = float(style["x"])
+        y = float(style["y"])
+        if x == 0.0 and y == 0.0:
+            continue
+
+        # ambil nilai
+        if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+            text = get_value_for_key(base_key).strip()
+        else:
+            text = ""  # unknown keys
+        if not text:
+            continue
+
         items.append({
-            "key": "S2", "text": s_txt,
-            "x": float(s2["x"]), "y": float(s2["y"]),
-            "size": int(s2["size"]), "bold": bool(s2["bold"]), "underline": bool(s2["underline"]),
-            "from_right": bool(s2["from_right"]), "align": str(s2["align"]),
-            "max_width": float(s2.get("max_width", 135.0))
+            "key": key,
+            "text": text,
+            "x": x,
+            "y": y,
+            "size": int(style["size"]),
+            "bold": bool(style["bold"]),
+            "underline": bool(style["underline"]),
+            "from_right": bool(style["from_right"]),
+            "align": str(style["align"]),
+            "max_width": float(style.get("max_width", 0.0)),
         })
 
     return items
@@ -820,11 +843,7 @@ if st.session_state.preview_pdf:
     <div style="height: 920px; width: 100%; border: 1px solid #ddd;">
       <embed type="application/pdf"
              src="data:application/pdf;base64,{b64}#toolbar=1&navpanes=0&statusbar=0&view=FitH"
-             width="100%" height="100%"/>
-      <p style="padding:8px;font-family:sans-serif;">
-        Jika PDF tidak tampil, Anda bisa
-        <a download="SPJ_A_to_Q_overlay_2hal.pdf" href="data:application/pdf;base64,{b64}">mengunduhnya di sini</a>.
-      </p>
+             width="100%" height="100%" />
     </div>
     """
     components.html(html, height=940, scrolling=True)
