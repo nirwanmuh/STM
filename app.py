@@ -194,7 +194,7 @@ def ensure_states():
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
         }
 
-    # Koordinat HALAMAN 2 — EDITABLE (A2..Q2 + R2 + S2 + Q2_TB)
+    # Koordinat HALAMAN 2 — EDITABLE (A2..Q2 + Q2_TB + DESC2 + R2 + S2)
     if "coord_style_page2" not in st.session_state:
         cs2 = {}
 
@@ -218,8 +218,12 @@ def ensure_states():
         cs2["Q2"] = _right_num(118, 420, 9, False)  # Q2 = angka (Q+K)
 
         # Q2_TB = terbilang (Q+K) — left aligned & wrapping
-        cs2["Q2_TB"] = {"x": 118.0, "y": 400.0, "size": 9, "bold": False, "underline": False,
-                        "align": "left", "from_right": False, "max_width": 260.0}
+        cs2["Q2_TB"] = {"x": 133.0, "y": 407.0, "size": 9, "bold": False, "underline": False,
+                        "align": "left", "from_right": False, "max_width": 350.0}
+
+        # DESC2 = kalimat keterangan dari C/D/E/F (editable, default tidak tercetak)
+        cs2["DESC2"] = {"x": 0.0, "y": 0.0, "size": 9, "bold": False, "underline": False,
+                        "align": "left", "from_right": False, "max_width": 350.0}
 
         # R2/S2 default 0 agar tidak tercetak
         cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True,
@@ -348,6 +352,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
 
     def wrap_text_by_space(text: str, font_name: str, font_size: float, max_width: float) -> List[str]:
         """Bungkus teks per spasi agar tiap baris <= max_width. Jika satu kata > max_width, pecah paksa."""
+        from reportlab.pdfbase.pdfmetrics import stringWidth
         words = text.split()
         if not words:
             return []
@@ -386,6 +391,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
 
     def draw_underlined_text(text: str, x_anchor: float, y: float, align: str, font_name: str, font_size: float):
         """Garis underline di bawah teks sesuai alignment."""
+        from reportlab.pdfbase.pdfmetrics import stringWidth
         width = stringWidth(text, font_name, font_size)
         if align == "right":
             x0 = x_anchor - width
@@ -517,7 +523,7 @@ with st.expander("Cara pakai (singkat)", expanded=False):
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
         "- **Langkah 2**: Isi **Data Atasan (R/S)** dan **Reimburse** untuk menghasilkan L–Q.\n"
         "- **Langkah 3**: Siapkan **template PDF** (`assets/spj_blank.pdf` & `assets/spj_blank2.pdf`) atau upload manual.\n"
-        "- **Langkah 4**: Atur **Koordinat Halaman 2** (A2..Q2 + **Q2_TB**) sesuai layout.\n"
+        "- **Langkah 4**: Atur **Koordinat Halaman 2** (A2..Q2 + **Q2_TB** + **DESC2**) sesuai layout.\n"
         "- **Langkah 5**: Preview & Download — otomatis **2 halaman**."
     )
 
@@ -707,14 +713,14 @@ with cst2:
 
 # ===== Setting Koordinat — HALAMAN 2 (EDITABLE) =====
 if not st.session_state.get("lock_page2_coords", False):
-    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + Q2_TB + R2 + S2)", expanded=True):
+    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + Q2_TB + DESC2 + R2 + S2)", expanded=True):
         st.caption("Atur posisi teks di **halaman 2**. (Tips: isi X/Y ≠ 0 agar tercetak.)")
         cs2 = st.session_state.coord_style_page2
 
         # urutan tampilan
         order_keys = [f"{k}2" for k in list("ABCDEFGHI")] + \
                      [f"{k}2" for k in list("KLMNOPQ")] + \
-                     ["Q2_TB", "R2", "S2"]
+                     ["Q2_TB", "DESC2", "R2", "S2"]
 
         # grid 3 kolom per baris
         for chunk_start in range(0, len(order_keys), 3):
@@ -734,7 +740,7 @@ if not st.session_state.get("lock_page2_coords", False):
                     conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
                     conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
 else:
-    pass  # tidak digunakan—editor aktif
+    pass  # editor aktif
 
 # Override nilai (opsional) — ikutkan R & S
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
@@ -868,6 +874,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
 
     - Q2 = ANGKA (Q + K) dengan pemisah ribuan; 0 -> "-"
     - Q2_TB = TERBILANG (bahasa Indonesia) dari (Q + K) + ' rupiah'
+    - DESC2 = Kalimat keterangan dari C/D/E/F, editable koordinatnya
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
@@ -878,7 +885,6 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
         if x == 0.0 and y == 0.0:
             continue
 
-        # Nilai khusus
         if key == "Q2":
             q_num = get_numeric_value_for_key("Q")
             k_num = get_numeric_value_for_key("K")
@@ -889,6 +895,13 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
             k_num = get_numeric_value_for_key("K")
             total = int(q_num) + int(k_num)
             text = terbilang_rupiah(total) if total != 0 else "nol rupiah"
+        elif key == "DESC2":
+            C = (get_value_for_key("C") or "").strip()
+            D = (get_value_for_key("D") or "").strip()
+            E = (get_value_for_key("E") or "").strip()
+            F = (get_value_for_key("F") or "").strip()
+            text = f"Telah sesuai sebagaimana adanya digunakan dalam rangka keperluan perjalanan dinas ke {C}, tanggal {D} s/d {E} dalam rangka {F}."
+            text = text.strip()
         else:
             # Map A2->A, ..., Q2->Q, R2->R, S2->S (default)
             if key.endswith("2"):
@@ -923,6 +936,12 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
 # =========================
 # Generate Preview
 # =========================
+pcol1, pcol2 = st.columns(2)
+with pcol1:
+    do_preview = st.button("🔁 Preview PDF (2 Halaman)", use_container_width=True)
+with pcol2:
+    do_download = st.button("⬇️ Download PDF (2 Halaman)", use_container_width=True)
+
 if do_preview:
     bg1 = st.session_state.bg_template_bytes
     bg2 = st.session_state.bg_template2_bytes
