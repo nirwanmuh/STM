@@ -76,6 +76,39 @@ def ensure_states():
     if "val_overrides" not in st.session_state:
         st.session_state.val_overrides: Dict[str, str] = {}
 
+    # ✅ Extra items (DIDEFAULTKAN agar tidak AttributeError)
+    if "extra_items" not in st.session_state:
+        st.session_state.extra_items = {
+            # Duplikasi K (mis. untuk posisi lain di halaman 1)
+            "K_DUP": {
+                "key": "K",
+                "x": 260.0, "y": 200.0,  # silakan sesuaikan
+                "size": 9, "bold": False, "underline": False,
+                "from_right": True, "align": "right",
+            },
+            # J di sisi kanan (pakai angka dari raw J, bukan (E-D+1))
+            "J_RIGHT": {
+                "key": "J",
+                "x": 300.0, "y": 600.0,  # silakan sesuaikan
+                "size": 9, "bold": False, "underline": False,
+                "from_right": False, "align": "left",
+            },
+            # Duplikasi A (Employee Name) di posisi lain halaman 1
+            "A_DUP": {
+                "key": "A",
+                "x": 190.0, "y": 690.0,  # silakan sesuaikan
+                "size": 9, "bold": False, "underline": False,
+                "from_right": False, "align": "left",
+            },
+            # Q_DUP = Q + K (total reimburse + uang harian)
+            "Q_DUP": {
+                "key": "Q",  # diisi nilai penjumlahan Q+K saat render
+                "x": 260.0, "y": 215.0,  # silakan sesuaikan
+                "size": 9, "bold": True, "underline": False,
+                "from_right": True, "align": "right",
+            },
+        }
+
     # Koordinat HALAMAN 1 (fixed; tidak muncul di UI)
     if "coord_style" not in st.session_state:
         st.session_state.coord_style = {
@@ -642,11 +675,15 @@ with st.expander("✏️ Override Nilai (opsional)", expanded=False):
     keys2 = list("KLMNOPQ")
     for i, k in enumerate(keys1):
         with cols[i % 4]:
-            st.session_state.val_overrides[k] = st.text_input(f"{k} (override)", value=st.session_state.val_overrides.get(k, ""))
+            st.session_state.val_overrides[k] = st.text_input(
+                f"{k} (override)", value=st.session_state.val_overrides.get(k, "")
+            )
     st.markdown("---")
     for i, k in enumerate(keys2):
         with cols[i % 4]:
-            st.session_state.val_overrides[k] = st.text_input(f"{k} (override)", value=st.session_state.val_overrides.get(k, ""))
+            st.session_state.val_overrides[k] = st.text_input(
+                f"{k} (override)", value=st.session_state.val_overrides.get(k, "")
+            )
 
 # Tombol preview & download
 pcol1, pcol2 = st.columns(2)
@@ -679,7 +716,12 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
         else:
             text = get_value_for_key(k)
         if str(text).strip():
-            items.append({"key": k, "text": str(text), "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": False, "align": align})
+            items.append(
+                {
+                    "key": k, "text": str(text), "x": x, "y": y, "size": size,
+                    "bold": bold, "underline": ul, "from_right": False, "align": align
+                }
+            )
 
     # 2) F–I
     for k in ["F", "G", "H", "I"]:
@@ -690,7 +732,10 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
         if k == "F" and (x == 0 and y == 0):
             continue
         if txt:
-            item = {"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": fr, "align": align}
+            item = {
+                "key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold,
+                "underline": ul, "from_right": fr, "align": align
+            }
             if k in ["G", "H"]:
                 item["max_width"] = float(style.get("max_width", 135.0))
             items.append(item)
@@ -724,38 +769,69 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
         size, bold, fr, align, ul = style["size"], style["bold"], style["from_right"], style["align"], style["underline"]
         txt = get_value_for_key(k).strip()
         if txt:
-            items.append({"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": fr, "align": align})
+            items.append(
+                {"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold,
+                 "underline": ul, "from_right": fr, "align": align}
+            )
 
-    # 4) Extra items
-    extras = st.session_state.extra_items
+    # 4) Extra items (AMAN: gunakan get + cek key)
+    extras = st.session_state.get("extra_items", {})
 
     # K_DUP
-    kd = extras["K_DUP"]
-    text_k = get_value_for_key(kd["key"]).strip()
-    if text_k:
-        items.append({"key": kd["key"], "text": text_k, "x": kd["x"], "y": kd["y"], "size": kd["size"], "bold": kd["bold"], "underline": kd["underline"], "from_right": kd["from_right"], "align": kd["align"]})
+    kd = extras.get("K_DUP")
+    if kd:
+        text_k = get_value_for_key(kd["key"]).strip()
+        if text_k:
+            items.append({
+                "key": kd["key"], "text": text_k,
+                "x": kd["x"], "y": kd["y"],
+                "size": kd["size"], "bold": kd["bold"],
+                "underline": kd["underline"],
+                "from_right": kd["from_right"], "align": kd["align"]
+            })
 
-    # J_RIGHT
-    jr = extras["J_RIGHT"]
-    raw_j = (st.session_state.parsed_AK or {}).get("J")
-    j_digits = "".join(ch for ch in str(raw_j or "") if ch.isdigit())
-    j_text = "-" if (j_digits == "" or int(j_digits) == 0) else j_digits
-    if j_text:
-        items.append({"key": jr["key"], "text": j_text, "x": jr["x"], "y": jr["y"], "size": jr["size"], "bold": jr["bold"], "underline": jr["underline"], "from_right": jr["from_right"], "align": jr["align"]})
+    # J_RIGHT (pakai raw J)
+    jr = extras.get("J_RIGHT")
+    if jr:
+        raw_j = (st.session_state.parsed_AK or {}).get("J")
+        j_digits = "".join(ch for ch in str(raw_j or "") if ch.isdigit())
+        j_text = "-" if (j_digits == "" or int(j_digits) == 0) else j_digits
+        if j_text:
+            items.append({
+                "key": jr["key"], "text": j_text,
+                "x": jr["x"], "y": jr["y"],
+                "size": jr["size"], "bold": jr["bold"],
+                "underline": jr["underline"],
+                "from_right": jr["from_right"], "align": jr["align"]
+            })
 
     # A_DUP
-    ad = extras["A_DUP"]
-    a_text = get_value_for_key(ad["key"]).strip()
-    if a_text:
-        items.append({"key": ad["key"], "text": a_text, "x": ad["x"], "y": ad["y"], "size": ad["size"], "bold": ad["bold"], "underline": ad["underline"], "from_right": ad["from_right"], "align": ad["align"]})
+    ad = extras.get("A_DUP")
+    if ad:
+        a_text = get_value_for_key(ad["key"]).strip()
+        if a_text:
+            items.append({
+                "key": ad["key"], "text": a_text,
+                "x": ad["x"], "y": ad["y"],
+                "size": ad["size"], "bold": ad["bold"],
+                "underline": ad["underline"],
+                "from_right": ad["from_right"], "align": ad["align"]
+            })
 
     # Q_DUP = Q + K
-    qd = extras["Q_DUP"]
-    q_num = get_numeric_value_for_key("Q")
-    k_num = get_numeric_value_for_key("K")
-    sum_qk = int(q_num) + int(k_num)
-    qd_text = "-" if sum_qk == 0 else fmt_n(sum_qk)
-    items.append({"key": qd["key"], "text": qd_text, "x": qd["x"], "y": qd["y"], "size": qd["size"], "bold": qd["bold"], "underline": qd["underline"], "from_right": qd["from_right"], "align": qd["align"]})
+    qd = extras.get("Q_DUP")
+    if qd:
+        q_num = get_numeric_value_for_key("Q")
+        k_num = get_numeric_value_for_key("K")
+        sum_qk = int(q_num) + int(k_num)
+        qd_text = "-" if sum_qk == 0 else fmt_n(sum_qk)
+        items.append({
+            "key": qd["key"], "text": qd_text,
+            "x": qd["x"], "y": qd["y"],
+            "size": qd["size"], "bold": qd["bold"],
+            "underline": qd["underline"],
+            "from_right": qd["from_right"], "align": qd["align"]
+        })
 
     return items
 
@@ -769,11 +845,6 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
-
-    # helper untuk format angka default (nol -> "-")
-    def default_display_for_key(base_key: str) -> str:
-        txt = get_value_for_key(base_key).strip()
-        return txt
 
     # Q2 khusus: Q + K
     q_sum = get_numeric_value_for_key("Q") + get_numeric_value_for_key("K")
@@ -791,7 +862,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
         if key == "Q2":
             text = q2_text
         elif base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
-            text = default_display_for_key(base_key)
+            text = get_value_for_key(base_key).strip()
         else:
             text = ""
 
