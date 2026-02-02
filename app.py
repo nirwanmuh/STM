@@ -116,33 +116,39 @@ def ensure_states():
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
         }
 
-    # Koordinat HALAMAN 2 (editable) — SEMUA VALUE
+    # Koordinat HALAMAN 2 — DIKUNCI (tidak editable)
     if "coord_style_page2" not in st.session_state:
-        # Default (0,0) supaya tidak tercetak sampai diset; untuk K..Q default align right + from_right=True
         cs2 = {}
-        # A..I
-        base_defaults = {
-            "A2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
-            "B2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
-            "C2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
-            "D2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
-            "E2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
-            "F2": {"size": 10,"bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
-            "G2": {"size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0},
-            "H2": {"size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0},
-            "I2": {"size": 8, "bold": True,  "underline": True,  "align": "center", "from_right": False, "max_width": 0.0},
-        }
-        # K..Q right-anchored by default
-        for k in list("ABCDEFGHI"):
-            key = f"{k}2"
-            d = base_defaults[key]
-            cs2[key] = {"x": 0.0, "y": 0.0, **d}
-        for k in list("KLMNOPQ"):
-            cs2[f"{k}2"] = {"x": 0.0, "y": 0.0, "size": 9, "bold": (k == "Q"), "underline": False, "align": "right", "from_right": True, "max_width": 0.0}
-        # R2/S2
-        cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True,  "underline": True,  "align": "center", "from_right": False, "max_width": 0.0}
-        cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
+
+        # A2 dan G2 (left aligned; from_right=False)
+        cs2["A2"] = {"x": 167.0, "y": 653.0, "size": 9, "bold": False, "underline": False,
+                     "align": "left", "from_right": False, "max_width": 0.0}
+        cs2["G2"] = {"x": 167.0, "y": 641.0, "size": 9, "bold": False, "underline": False,
+                     "align": "left", "from_right": False, "max_width": 0.0}
+
+        # K2..Q2 (right-aligned numbers; from_right=True, align=right)
+        def _right_num(x, y, size=9, bold=False):
+            return {"x": float(x), "y": float(y), "size": int(size), "bold": bool(bold),
+                    "underline": False, "align": "right", "from_right": True, "max_width": 0.0}
+
+        cs2["K2"] = _right_num(118, 432, 9, False)
+        cs2["L2"] = _right_num(118, 482.5, 9, False)
+        cs2["M2"] = _right_num(118, 495, 9, False)
+        cs2["N2"] = _right_num(118, 470, 9, False)
+        cs2["O2"] = _right_num(118, 457.5, 9, False)
+        cs2["P2"] = _right_num(118, 445, 9, False)
+        cs2["Q2"] = _right_num(118, 420, 9, False)  # sesuai permintaan (tanpa bold)
+
+        # R2/S2 tetap 0 agar tidak tercetak
+        cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True,
+                     "align": "center", "from_right": False, "max_width": 0.0}
+        cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False,
+                     "align": "center", "from_right": False, "max_width": 135.0}
+
         st.session_state.coord_style_page2 = cs2
+
+    # Flag untuk menonaktifkan UI editor halaman 2
+    st.session_state["lock_page2_coords"] = True
 
 
 def recompute_totals():
@@ -623,31 +629,47 @@ with cst2:
     ok2 = st.session_state.bg_template2_bytes is not None
     st.markdown(f"Halaman 2: {'✅ Siap' if ok2 else '❌ Belum'}")
 
-# ===== Setting Koordinat — HALAMAN 2 (SEMUA VALUE) =====
-with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + R2 + S2)", expanded=True):
-    st.caption("Atur posisi teks di **halaman 2**. (Tips: isi X/Y ≠ 0 agar tercetak.)")
-    cs2 = st.session_state.coord_style_page2
+# ===== Setting Koordinat — HALAMAN 2 (DIKUNCI) =====
+if not st.session_state.get("lock_page2_coords", False):
+    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + R2 + S2)", expanded=True):
+        st.caption("Atur posisi teks di **halaman 2**. (Tips: isi X/Y ≠ 0 agar tercetak.)")
+        cs2 = st.session_state.coord_style_page2
 
-    # urutan tampilan
-    order_keys = [f"{k}2" for k in list("ABCDEFGHI")] + [f"{k}2" for k in list("KLMNOPQ")] + ["R2", "S2"]
+        # urutan tampilan
+        order_keys = [f"{k}2" for k in list("ABCDEFGHI")] + [f"{k}2" for k in list("KLMNOPQ")] + ["R2", "S2"]
 
-    # grid 3 kolom per baris
-    for chunk_start in range(0, len(order_keys), 3):
-        cols = st.columns(3)
-        for i, key in enumerate(order_keys[chunk_start:chunk_start+3]):
-            if key not in cs2:
-                continue
-            with cols[i]:
-                st.markdown(f"**{key}**")
-                conf = cs2[key]
-                conf["x"] = st.number_input(f"{key} · X", value=float(conf["x"]), step=1.0, key=f"x2_{key}")
-                conf["y"] = st.number_input(f"{key} · Y", value=float(conf["y"]), step=1.0, key=f"y2_{key}")
-                conf["size"] = st.number_input(f"{key} · Size", value=int(conf["size"]), min_value=6, max_value=72, step=1, key=f"s2_{key}")
-                conf["bold"] = st.checkbox(f"{key} · Bold", value=bool(conf["bold"]), key=f"b2_{key}")
-                conf["underline"] = st.checkbox(f"{key} · Underline", value=bool(conf["underline"]), key=f"u2_{key}")
-                conf["align"] = st.selectbox(f"{key} · Align", options=["left", "center", "right"], index=["left","center","right"].index(conf["align"]), key=f"a2_{key}")
-                conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
-                conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
+        # grid 3 kolom per baris
+        for chunk_start in range(0, len(order_keys), 3):
+            cols = st.columns(3)
+            for i, key in enumerate(order_keys[chunk_start:chunk_start+3]):
+                if key not in cs2:
+                    continue
+                with cols[i]:
+                    st.markdown(f"**{key}**")
+                    conf = cs2[key]
+                    conf["x"] = st.number_input(f"{key} · X", value=float(conf["x"]), step=1.0, key=f"x2_{key}")
+                    conf["y"] = st.number_input(f"{key} · Y", value=float(conf["y"]), step=1.0, key=f"y2_{key}")
+                    conf["size"] = st.number_input(f"{key} · Size", value=int(conf["size"]), min_value=6, max_value=72, step=1, key=f"s2_{key}")
+                    conf["bold"] = st.checkbox(f"{key} · Bold", value=bool(conf["bold"]), key=f"b2_{key}")
+                    conf["underline"] = st.checkbox(f"{key} · Underline", value=bool(conf["underline"]), key=f"u2_{key}")
+                    conf["align"] = st.selectbox(f"{key} · Align", options=["left", "center", "right"], index=["left","center","right"].index(conf["align"]), key=f"a2_{key}")
+                    conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
+                    conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
+else:
+    # Informasi bahwa koordinat halaman 2 dikunci
+    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + R2 + S2)", expanded=False):
+        st.info(
+            "Koordinat halaman 2 dikunci dan tidak dapat diedit dari UI.\n\n"
+            "- **A2**: x=167, y=653, size=9, align=left\n"
+            "- **G2**: x=167, y=641, size=9, align=left\n"
+            "- **K2**: x=118, y=432, size=9, from_right=True, align=right\n"
+            "- **L2**: x=118, y=482.5, size=9, from_right=True, align=right\n"
+            "- **M2**: x=118, y=495, size=9, from_right=True, align=right\n"
+            "- **N2**: x=118, y=470, size=9, from_right=True, align=right\n"
+            "- **O2**: x=118, y=457.5, size=9, from_right=True, align=right\n"
+            "- **P2**: x=118, y=445, size=9, from_right=True, align=right\n"
+            "- **Q2**: x=118, y=420, size=9, from_right=True, align=right (nilai = Q + K)"
+        )
 
 # Override nilai (opsional) — ikutkan R & S
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
@@ -778,6 +800,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     """
     Items untuk halaman 2 — SEMUA VALUE dari coord_style_page2.
     Base value diambil dari A..Q + R/S (tanpa '2').
+    Q2 = Q + K (khusus).
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
@@ -788,19 +811,25 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
         base_key = key[:-1] if key.endswith("2") else key
         base_key = base_key.upper()
 
-        # Ambil teks dari base value:
-        # - untuk A..Q / R / S gunakan get_value_for_key(base_key)
-        # - skip jika X/Y = 0 agar tidak tercetak accidental
+        # Skip jika X/Y = 0 (tidak dicetak)
         x = float(style["x"])
         y = float(style["y"])
         if x == 0.0 and y == 0.0:
             continue
 
-        # ambil nilai
-        if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
-            text = get_value_for_key(base_key).strip()
+        # Ambil teks:
+        # === SPECIAL CASE: Q2 = Q + K ===
+        if key == "Q2":
+            q_num = get_numeric_value_for_key("Q")  # total reimburse
+            k_num = get_numeric_value_for_key("K")  # daily allowance total
+            q2_num = int(q_num) + int(k_num)
+            text = "-" if q2_num == 0 else fmt_n(q2_num)
         else:
-            text = ""  # unknown keys
+            if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+                text = get_value_for_key(base_key).strip()
+            else:
+                text = ""
+
         if not text:
             continue
 
