@@ -268,7 +268,7 @@ def ensure_states():
         # G2_AGAIN: value G
         cs2["G2_AGAIN"] = {
             "x": 180.0, "y": 212.0, "size": 9, "bold": False, "underline": False,
-            "align": "center", "from_right": True, "max_width": 0.0
+            "align": "center", "from_right": True, "max_width": 135.0
         }
 
         st.session_state.coord_style_page2 = cs2
