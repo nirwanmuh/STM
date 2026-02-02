@@ -114,14 +114,11 @@ def terbilang_id(n: int) -> str:
             hitung = sisa // skala
             sisa = sisa % skala
             if skala == 1000 and hitung == 1:
-                # 1000 -> "seribu" (bukan "satu ribu")
                 bagian.append("seribu")
             else:
-                # untuk bagian < 1000 gunakan helper
                 if hitung < 1000:
                     kata = _terbilang_lt_1000(hitung)
                 else:
-                    # jika > 999 (bisa terjadi di skala=1), pecah lagi
                     kata = terbilang_id(hitung)
                 if kata:
                     if nama:
@@ -197,7 +194,7 @@ def ensure_states():
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
         }
 
-    # Koordinat HALAMAN 2 — EDITABLE (dikembalikan bisa diubah dari UI)
+    # Koordinat HALAMAN 2 — EDITABLE (A2..Q2 + R2 + S2 + Q2_TB)
     if "coord_style_page2" not in st.session_state:
         cs2 = {}
 
@@ -218,10 +215,11 @@ def ensure_states():
         cs2["N2"] = _right_num(118, 470, 9, False)
         cs2["O2"] = _right_num(118, 457.5, 9, False)
         cs2["P2"] = _right_num(118, 445, 9, False)
+        cs2["Q2"] = _right_num(118, 420, 9, False)  # Q2 = angka (Q+K)
 
-        # Q2 sekarang terbilang -> default left aligned, allow wrapping
-        cs2["Q2"] = {"x": 118.0, "y": 420.0, "size": 9, "bold": False, "underline": False,
-                     "align": "left", "from_right": False, "max_width": 220.0}
+        # Q2_TB = terbilang (Q+K) — left aligned & wrapping
+        cs2["Q2_TB"] = {"x": 118.0, "y": 400.0, "size": 9, "bold": False, "underline": False,
+                        "align": "left", "from_right": False, "max_width": 260.0}
 
         # R2/S2 default 0 agar tidak tercetak
         cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True,
@@ -231,7 +229,7 @@ def ensure_states():
 
         st.session_state.coord_style_page2 = cs2
 
-    # Pastikan UI editor halaman 2 AKTIF
+    # Editor halaman 2 AKTIF
     st.session_state["lock_page2_coords"] = False
 
 
@@ -279,7 +277,6 @@ def get_value_for_key(key: str) -> str:
     """
     ov = st.session_state.val_overrides.get(key)
     if ov not in (None, ""):
-        # Jika override numerik & 0, tampil "-"
         if ov.strip().isdigit() and int(ov.strip()) == 0:
             return "-"
         return str(ov)
@@ -300,7 +297,6 @@ def get_value_for_key(key: str) -> str:
     style = st.session_state.coord_style.get(key, {})
     fmt_mode = style.get("fmt", "raw")
 
-    # number / auto -> jika 0, tampil "-"
     if fmt_mode == "number":
         try:
             val = idr_to_int(raw) if isinstance(raw, str) else int(raw)
@@ -309,7 +305,6 @@ def get_value_for_key(key: str) -> str:
         return "-" if val == 0 else fmt_n(int(val))
 
     if fmt_mode == "auto":
-        # coba angka dulu
         try:
             val = idr_to_int(raw) if isinstance(raw, str) else int(raw)
             return "-" if val == 0 else fmt_n(int(val))
@@ -317,7 +312,6 @@ def get_value_for_key(key: str) -> str:
             pass
         return str(raw or "")
 
-    # raw biasa
     return str(raw or "")
 
 
@@ -415,7 +409,6 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         underline = bool(it.get("underline", False))
         from_right = bool(it.get("from_right", False))
         align = (it.get("align") or "left").lower()
-        key = (it.get("key") or "").upper()
         max_width = float(it.get("max_width", 0.0))
 
         font = "Helvetica-Bold" if bold else "Helvetica"
@@ -524,7 +517,7 @@ with st.expander("Cara pakai (singkat)", expanded=False):
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
         "- **Langkah 2**: Isi **Data Atasan (R/S)** dan **Reimburse** untuk menghasilkan L–Q.\n"
         "- **Langkah 3**: Siapkan **template PDF** (`assets/spj_blank.pdf` & `assets/spj_blank2.pdf`) atau upload manual.\n"
-        "- **Langkah 4**: Atur **koordinat HALAMAN 2** (A2..Q2 + R2 + S2) sesuai layout.\n"
+        "- **Langkah 4**: Atur **Koordinat Halaman 2** (A2..Q2 + **Q2_TB**) sesuai layout.\n"
         "- **Langkah 5**: Preview & Download — otomatis **2 halaman**."
     )
 
@@ -686,7 +679,6 @@ if not st.session_state.bg_template2_bytes:
                 st.session_state.bg_template2_bytes = f.read()
             st.info(f"Template halaman 2 di-load dari: {DEFAULT_BG2_PATH}")
         else:
-            # fallback ke file tanpa ekstensi (jaga-jaga)
             fallback = "assets/spj_blank2"
             if os.path.exists(fallback):
                 with open(fallback, "rb") as f:
@@ -715,12 +707,14 @@ with cst2:
 
 # ===== Setting Koordinat — HALAMAN 2 (EDITABLE) =====
 if not st.session_state.get("lock_page2_coords", False):
-    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + R2 + S2)", expanded=True):
+    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + Q2_TB + R2 + S2)", expanded=True):
         st.caption("Atur posisi teks di **halaman 2**. (Tips: isi X/Y ≠ 0 agar tercetak.)")
         cs2 = st.session_state.coord_style_page2
 
         # urutan tampilan
-        order_keys = [f"{k}2" for k in list("ABCDEFGHI")] + [f"{k}2" for k in list("KLMNOPQ")] + ["R2", "S2"]
+        order_keys = [f"{k}2" for k in list("ABCDEFGHI")] + \
+                     [f"{k}2" for k in list("KLMNOPQ")] + \
+                     ["Q2_TB", "R2", "S2"]
 
         # grid 3 kolom per baris
         for chunk_start in range(0, len(order_keys), 3):
@@ -740,8 +734,7 @@ if not st.session_state.get("lock_page2_coords", False):
                     conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
                     conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
 else:
-    # (Tidak dipakai, karena lock_page2_coords=False)
-    pass
+    pass  # tidak digunakan—editor aktif
 
 # Override nilai (opsional) — ikutkan R & S
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
@@ -872,31 +865,37 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     """
     Items untuk halaman 2 — SEMUA VALUE dari coord_style_page2.
     Base value diambil dari A..Q + R/S (tanpa '2').
-    Q2 = TERBILANG (bahasa Indonesia) dari (Q + K) + ' rupiah'.
+
+    - Q2 = ANGKA (Q + K) dengan pemisah ribuan; 0 -> "-"
+    - Q2_TB = TERBILANG (bahasa Indonesia) dari (Q + K) + ' rupiah'
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
 
-    # iterate semua key di cs2
     for key, style in cs2.items():
-        # Map A2->A, ..., Q2->Q, R2->R, S2->S
-        base_key = key[:-1] if key.endswith("2") else key
-        base_key = base_key.upper()
-
-        # Skip jika X/Y = 0 (tidak dicetak)
         x = float(style["x"])
         y = float(style["y"])
         if x == 0.0 and y == 0.0:
             continue
 
-        # Ambil teks:
+        # Nilai khusus
         if key == "Q2":
-            # Q2 = terbilang (Q + K) + ' rupiah'
-            q_num = get_numeric_value_for_key("Q")  # total reimburse
-            k_num = get_numeric_value_for_key("K")  # daily allowance total
-            q2_num = int(q_num) + int(k_num)
-            text = terbilang_rupiah(q2_num) if q2_num != 0 else "nol rupiah"
+            q_num = get_numeric_value_for_key("Q")
+            k_num = get_numeric_value_for_key("K")
+            total = int(q_num) + int(k_num)
+            text = "-" if total == 0 else fmt_n(total)
+        elif key == "Q2_TB":
+            q_num = get_numeric_value_for_key("Q")
+            k_num = get_numeric_value_for_key("K")
+            total = int(q_num) + int(k_num)
+            text = terbilang_rupiah(total) if total != 0 else "nol rupiah"
         else:
+            # Map A2->A, ..., Q2->Q, R2->R, S2->S (default)
+            if key.endswith("2"):
+                base_key = key[:-1].upper()
+            else:
+                base_key = key.upper()
+
             if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
                 text = get_value_for_key(base_key).strip()
             else:
