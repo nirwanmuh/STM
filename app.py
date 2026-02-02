@@ -53,6 +53,28 @@ def day_diff_inclusive(D: Optional[str], E: Optional[str]) -> Optional[int]:
     return (d2.date() - d1.date()).days + 1
 
 
+def today_id_str(prefix_city: str = "Jakarta") -> str:
+    """
+    "Jakarta, 2 Februari 2026" — format tanggal Indonesia dengan zona Asia/Jakarta jika tersedia.
+    Menggunakan zoneinfo (Python 3.9+). Jika tidak ada, fallback ke datetime.now() lokal.
+    """
+    from datetime import datetime
+    try:
+        from zoneinfo import ZoneInfo  # Python 3.9+
+        now = datetime.now(ZoneInfo("Asia/Jakarta"))
+    except Exception:
+        now = datetime.now()
+
+    bulan_id = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ]
+    d = now.day
+    m = bulan_id[now.month - 1]
+    y = now.year
+    return f"{prefix_city}, {d} {m} {y}"
+
+
 # =========================
 # Terbilang (Indonesia) untuk Rupiah
 # =========================
@@ -188,20 +210,19 @@ def ensure_states():
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True, "underline": False, "from_right": True, "align": "right"},
         }
 
-    
-    # Koordinat HALAMAN 2 — EDITABLE (A2..Q2 + Q2_TB + DESC2 + R2 + S2)
+    # Koordinat HALAMAN 2 — EDITABLE (A2..Q2 + Q2_TB + DESC2 + R2 + S2 + CUSTOM)
     if "coord_style_page2" not in st.session_state:
         cs2 = {}
-    
+
         # A2 / G2
         cs2["A2"] = {"x": 167.0, "y": 653.0, "size": 9, "bold": False, "underline": False, "align": "left", "from_right": False, "max_width": 0.0}
         cs2["G2"] = {"x": 167.0, "y": 641.0, "size": 9, "bold": False, "underline": False, "align": "left", "from_right": False, "max_width": 0.0}
-    
+
         # K2..Q2 angka (right-anchored)
         def _right_num(x, y, size=9, bold=False):
             return {"x": float(x), "y": float(y), "size": int(size), "bold": bool(bold),
                     "underline": False, "align": "right", "from_right": True, "max_width": 0.0}
-    
+
         cs2["K2"] = _right_num(118, 432)
         cs2["L2"] = _right_num(118, 482.5)
         cs2["M2"] = _right_num(118, 495)
@@ -209,25 +230,34 @@ def ensure_states():
         cs2["O2"] = _right_num(118, 457.5)
         cs2["P2"] = _right_num(118, 445)
         cs2["Q2"] = _right_num(118, 420)  # Q2 = angka (Q+K)
-    
-        # Q2_TB = terbilang (Q+K) — x133,y407, max_width 350 (SUDAH SESUAI)
-        cs2["Q2_TB"] = {
-            "x": 133.0, "y": 407.0, "size": 9, "bold": False, "underline": False,
-            "align": "left", "from_right": False, "max_width": 350.0
-        }
-    
-        # DESC2 = kalimat keterangan — SET KE x82,y370, size9, max_width 420 (DIUBAH)
-        cs2["DESC2"] = {
-            "x": 82.0, "y": 370.0, "size": 9, "bold": False, "underline": False,
-            "align": "left", "from_right": False, "max_width": 420.0
-        }
-    
+
+        # Q2_TB = terbilang (Q+K) — default x133,y407, max_width 350
+        cs2["Q2_TB"] = {"x": 133.0, "y": 407.0, "size": 9, "bold": False, "underline": False,
+                        "align": "left", "from_right": False, "max_width": 350.0}
+
+        # DESC2 = kalimat keterangan C/D/E/F — SET agar langsung tercetak
+        cs2["DESC2"] = {"x": 82.0, "y": 370.0, "size": 9, "bold": False, "underline": False,
+                        "align": "left", "from_right": False, "max_width": 420.0}
+
         # R2 / S2 (opsional)
         cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True, "align": "center", "from_right": False, "max_width": 0.0}
         cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
-    
+
+        # ===== Tambahan custom (editable): CITY_TODAY, A2_AGAIN, G2_AGAIN =====
+        cs2["CITY_TODAY"] = {
+            "x": 0.0, "y": 0.0, "size": 9, "bold": False, "underline": False,
+            "align": "left", "from_right": False, "max_width": 350.0
+        }
+        cs2["A2_AGAIN"] = {
+            "x": 0.0, "y": 0.0, "size": 9, "bold": False, "underline": False,
+            "align": "left", "from_right": False, "max_width": 250.0
+        }
+        cs2["G2_AGAIN"] = {
+            "x": 0.0, "y": 0.0, "size": 9, "bold": False, "underline": False,
+            "align": "left", "from_right": False, "max_width": 250.0
+        }
+
         st.session_state.coord_style_page2 = cs2
-    
 
     # Editor halaman 2 AKTIF
     st.session_state["lock_page2_coords"] = False
@@ -506,7 +536,7 @@ with st.expander("Cara pakai (singkat)", expanded=False):
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
         "- **Langkah 2**: Isi **Data Atasan (R/S)** dan **Reimburse** untuk menghasilkan L–Q.\n"
         "- **Langkah 3**: Siapkan **template PDF** (`assets/spj_blank.pdf` & `assets/spj_blank2.pdf`) atau upload manual.\n"
-        "- **Langkah 4**: Atur **Koordinat Halaman 2** (A2..Q2 + **Q2_TB** + **DESC2**) sesuai layout.\n"
+        "- **Langkah 4**: Atur **Koordinat Halaman 2** (A2..Q2 + **Q2_TB** + **DESC2** + **CITY_TODAY/A2_AGAIN/G2_AGAIN**) sesuai layout.\n"
         "- **Langkah 5**: Preview & Download — otomatis **2 halaman**."
     )
 
@@ -695,14 +725,14 @@ with cst2:
 
 # ===== Setting Koordinat — HALAMAN 2 (EDITABLE) =====
 if not st.session_state.get("lock_page2_coords", False):
-    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + Q2_TB + DESC2 + R2 + S2)", expanded=True):
+    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + Q2_TB + DESC2 + R2 + S2 + CUSTOM)", expanded=True):
         st.caption("Atur posisi teks di **halaman 2**. (Tips: isi X/Y ≠ 0 agar tercetak.)")
         cs2 = st.session_state.coord_style_page2
 
-        # urutan tampilan
+        # urutan tampilan — tambahkan CITY_TODAY, A2_AGAIN, G2_AGAIN
         order_keys = [f"{k}2" for k in list("ABCDEFGHI")] + \
                      [f"{k}2" for k in list("KLMNOPQ")] + \
-                     ["Q2_TB", "DESC2", "R2", "S2"]
+                     ["Q2_TB", "DESC2", "CITY_TODAY", "A2_AGAIN", "G2_AGAIN", "R2", "S2"]
 
         # grid 3 kolom per baris
         for chunk_start in range(0, len(order_keys), 3):
@@ -817,6 +847,9 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     - Q2 = ANGKA (Q + K) -> "-" jika 0
     - Q2_TB = TERBILANG (Q + K) + " rupiah"
     - DESC2 = "Telah sesuai ... ke [C], tanggal [D] s/d [E] dalam rangka [F]."
+    - CITY_TODAY = "Jakarta, [tanggal hari ini]"
+    - A2_AGAIN = value A
+    - G2_AGAIN = value G
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
@@ -841,6 +874,12 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
             F = (get_value_for_key("F") or "").strip()
             text = f"Telah sesuai sebagaimana adanya digunakan dalam rangka keperluan perjalanan dinas ke {C}, tanggal {D} s/d {E} dalam rangka {F}."
             text = text.strip()
+        elif key == "CITY_TODAY":
+            text = today_id_str("Jakarta")
+        elif key == "A2_AGAIN":
+            text = (get_value_for_key("A") or "").strip()
+        elif key == "G2_AGAIN":
+            text = (get_value_for_key("G") or "").strip()
         else:
             base_key = key[:-1].upper() if key.endswith("2") else key.upper()
             if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
