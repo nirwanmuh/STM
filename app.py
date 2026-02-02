@@ -74,12 +74,12 @@ def ensure_states():
     if "coord_style" not in st.session_state:
         st.session_state.coord_style = {
             # A–E, J kiri (fixed). J kiri ditulis di (190,600,size=9) dengan nilai (E-D+1).
-            "A": {"x": 190.0, "y": 666.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "B": {"x": 190.0, "y": 652.5, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "C": {"x": 190.0, "y": 639.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "D": {"x": 190.0, "y": 625.5, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "E": {"x": 190.0, "y": 612.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "J": {"x": 190.0, "y": 600.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "A": {"x": 190.0, "y": 666.0, "size": 7, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "B": {"x": 190.0, "y": 652.5, "size": 7, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "C": {"x": 190.0, "y": 639.0, "size": 7, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "D": {"x": 190.0, "y": 625.5, "size": 7, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "E": {"x": 190.0, "y": 612.0, "size": 7, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "J": {"x": 190.0, "y": 600.0, "size": 7, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
 
             # F–I:
             "F": {"x": 0.0,   "y": 0.0,   "size": 10, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": False},
@@ -88,13 +88,13 @@ def ensure_states():
             "I": {"x": 124.0, "y": 88.0,  "size": 8,  "bold": True,  "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
 
             # K–Q: X dari kanan & rata kanan. K–P fixed; Q fixed (sesuai instruksi).
-            "K": {"x": 260.0, "y": 520.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "L": {"x": 260.0, "y": 313.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "M": {"x": 260.0, "y": 299.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "N": {"x": 260.0, "y": 286.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "O": {"x": 260.0, "y": 273.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "P": {"x": 260.0, "y": 260.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "Q": {"x": 260.0, "y": 227.0, "size": 9,  "bold": True,  "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "K": {"x": 260.0, "y": 520.0, "size": 7,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "L": {"x": 260.0, "y": 313.0, "size": 7,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "M": {"x": 260.0, "y": 299.0, "size": 7,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "N": {"x": 260.0, "y": 286.0, "size": 7,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "O": {"x": 260.0, "y": 273.0, "size": 7,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "P": {"x": 260.0, "y": 260.0, "size": 7,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "Q": {"x": 260.0, "y": 227.0, "size": 7,  "bold": True,  "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
 
             # === Tambahan: R & S (atasan) ===
             # R: x=281, y=88, bold, center, underline, size=8, no-wrap
