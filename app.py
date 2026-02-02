@@ -110,7 +110,7 @@ def ensure_states():
             # K kedua @ (Xr=260, Y=534)
             "K_DUP": {"key": "K", "x": 260.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
             # J kanan @ (Xr=110, Y=534) -> pakai J hasil parsing (digit)
-            "J_RIGHT": {"key": "J", "x": 110.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
+            "J_RIGHT": {"key": "J", "x": 120.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
             # Duplikat A @ (X=439, Y=88), size 8, bold + underline, center, NO wrap
             "A_DUP": {"key": "A", "x": 439.0, "y": 88.0,  "size": 8, "bold": True,  "underline": True,  "from_right": False, "align": "center"},
             # Duplikat Q @ (Xr=260, Y=183), size 9, bold, right  ==> NILAI = Q + K
