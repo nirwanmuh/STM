@@ -45,9 +45,7 @@ def parse_date_or_none(s: Optional[str]):
 
 
 def day_diff_inclusive(D: Optional[str], E: Optional[str]) -> Optional[int]:
-    """
-    Hitung (E - D + 1) hari (INKLUSIF): 19..21 -> 3. Gagal parse -> None.
-    """
+    """Hitung (E - D + 1) hari (inklusif): 19..21 -> 3."""
     d1 = parse_date_or_none(D)
     d2 = parse_date_or_none(E)
     if not d1 or not d2:
@@ -94,7 +92,7 @@ def _terbilang_lt_1000(n: int) -> str:
 
 
 def terbilang_id(n: int) -> str:
-    """Terbilang angka non-negatif dalam bahasa Indonesia (tanpa 'rupiah')."""
+    """Terbilang angka non-negatif (tanpa 'rupiah')."""
     if n == 0:
         return "nol"
     if n < 0:
@@ -154,82 +152,74 @@ def ensure_states():
     if "val_overrides" not in st.session_state:
         st.session_state.val_overrides: Dict[str, str] = {}
 
-    # Koordinat HALAMAN 1 (fixed; tidak muncul di UI)
+    # Koordinat HALAMAN 1 (fixed)
     if "coord_style" not in st.session_state:
         st.session_state.coord_style = {
-            # A–E, J kiri (fixed). J kiri ditulis di (190,600,size=9) dengan nilai (E-D+1).
-            "A": {"x": 190.0, "y": 666.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "B": {"x": 190.0, "y": 652.5, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "C": {"x": 190.0, "y": 639.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "D": {"x": 190.0, "y": 625.5, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "E": {"x": 190.0, "y": 612.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
-            "J": {"x": 190.0, "y": 600.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": True},
+            "A": {"x": 190.0, "y": 666.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left", "locked": True},
+            "B": {"x": 190.0, "y": 652.5, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left", "locked": True},
+            "C": {"x": 190.0, "y": 639.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left", "locked": True},
+            "D": {"x": 190.0, "y": 625.5, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left", "locked": True},
+            "E": {"x": 190.0, "y": 612.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left", "locked": True},
+            "J": {"x": 190.0, "y": 600.0, "size": 9, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left", "locked": True},
 
-            # F–I:
-            "F": {"x": 0.0,   "y": 0.0,   "size": 10, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": False},
-            "G": {"x": 439.0, "y": 78.0,  "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True,  "max_width": 135.0},
-            "H": {"x": 124.0, "y": 78.0,  "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True,  "max_width": 135.0},
-            "I": {"x": 124.0, "y": 88.0,  "size": 8,  "bold": True,  "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
+            "F": {"x": 0.0, "y": 0.0, "size": 10, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left", "locked": False},
+            "G": {"x": 439.0, "y": 78.0, "size": 7, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True, "max_width": 135.0},
+            "H": {"x": 124.0, "y": 78.0, "size": 7, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True, "max_width": 135.0},
+            "I": {"x": 124.0, "y": 88.0, "size": 8, "bold": True, "underline": True, "fmt": "raw", "from_right": False, "align": "center", "locked": True},
 
-            # K–Q: X dari kanan & rata kanan (fixed).
-            "K": {"x": 260.0, "y": 520.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "L": {"x": 260.0, "y": 313.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "M": {"x": 260.0, "y": 299.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "N": {"x": 260.0, "y": 286.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "O": {"x": 260.0, "y": 273.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "P": {"x": 260.0, "y": 260.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "Q": {"x": 260.0, "y": 227.0, "size": 9,  "bold": True,  "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "K": {"x": 260.0, "y": 520.0, "size": 9, "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "L": {"x": 260.0, "y": 313.0, "size": 9, "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "M": {"x": 260.0, "y": 299.0, "size": 9, "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "N": {"x": 260.0, "y": 286.0, "size": 9, "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "O": {"x": 260.0, "y": 273.0, "size": 9, "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "P": {"x": 260.0, "y": 260.0, "size": 9, "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            "Q": {"x": 260.0, "y": 227.0, "size": 9, "bold": True, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
 
-            # R & S (atasan) — style halaman 1 (fixed)
-            "R": {"x": 281.0, "y": 88.0, "size": 8, "bold": True, "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
-            "S": {"x": 281.0, "y": 78.0, "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True, "max_width": 135.0},
+            "R": {"x": 281.0, "y": 88.0, "size": 8, "bold": True, "underline": True, "fmt": "raw", "from_right": False, "align": "center", "locked": True},
+            "S": {"x": 281.0, "y": 78.0, "size": 7, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True, "max_width": 135.0},
         }
 
-    # Item duplikasi (hard-coded) — halaman 1
+    # Item duplikasi — halaman 1
     if "extra_items" not in st.session_state:
         st.session_state.extra_items = {
-            "K_DUP": {"key": "K", "x": 260.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
-            "J_RIGHT": {"key": "J", "x": 120.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
-            "A_DUP": {"key": "A", "x": 439.0, "y": 88.0,  "size": 8, "bold": True,  "underline": True,  "from_right": False, "align": "center"},
-            "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
+            "K_DUP": {"key": "K", "x": 260.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True, "align": "right"},
+            "J_RIGHT": {"key": "J", "x": 120.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True, "align": "right"},
+            "A_DUP": {"key": "A", "x": 439.0, "y": 88.0, "size": 8, "bold": True, "underline": True, "from_right": False, "align": "center"},
+            "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True, "underline": False, "from_right": True, "align": "right"},
         }
 
     # Koordinat HALAMAN 2 — EDITABLE (A2..Q2 + Q2_TB + DESC2 + R2 + S2)
     if "coord_style_page2" not in st.session_state:
         cs2 = {}
 
-        # A2 dan G2 (left aligned; from_right=False)
-        cs2["A2"] = {"x": 167.0, "y": 653.0, "size": 9, "bold": False, "underline": False,
-                     "align": "left", "from_right": False, "max_width": 0.0}
-        cs2["G2"] = {"x": 167.0, "y": 641.0, "size": 9, "bold": False, "underline": False,
-                     "align": "left", "from_right": False, "max_width": 0.0}
+        # A2 / G2
+        cs2["A2"] = {"x": 167.0, "y": 653.0, "size": 9, "bold": False, "underline": False, "align": "left", "from_right": False, "max_width": 0.0}
+        cs2["G2"] = {"x": 167.0, "y": 641.0, "size": 9, "bold": False, "underline": False, "align": "left", "from_right": False, "max_width": 0.0}
 
-        # K2..P2 default right-aligned numbers; from_right=True
+        # K2..Q2 angka (right-anchored)
         def _right_num(x, y, size=9, bold=False):
             return {"x": float(x), "y": float(y), "size": int(size), "bold": bool(bold),
                     "underline": False, "align": "right", "from_right": True, "max_width": 0.0}
 
-        cs2["K2"] = _right_num(118, 432, 9, False)
-        cs2["L2"] = _right_num(118, 482.5, 9, False)
-        cs2["M2"] = _right_num(118, 495, 9, False)
-        cs2["N2"] = _right_num(118, 470, 9, False)
-        cs2["O2"] = _right_num(118, 457.5, 9, False)
-        cs2["P2"] = _right_num(118, 445, 9, False)
-        cs2["Q2"] = _right_num(118, 420, 9, False)  # Q2 = angka (Q+K)
+        cs2["K2"] = _right_num(118, 432)
+        cs2["L2"] = _right_num(118, 482.5)
+        cs2["M2"] = _right_num(118, 495)
+        cs2["N2"] = _right_num(118, 470)
+        cs2["O2"] = _right_num(118, 457.5)
+        cs2["P2"] = _right_num(118, 445)
+        cs2["Q2"] = _right_num(118, 420)  # Q2 = angka (Q+K)
 
-        # Q2_TB = terbilang (Q+K) — left aligned & wrapping
+        # Q2_TB = terbilang (Q+K) — default x133,y407, max_width 350
         cs2["Q2_TB"] = {"x": 133.0, "y": 407.0, "size": 9, "bold": False, "underline": False,
                         "align": "left", "from_right": False, "max_width": 350.0}
 
-        # DESC2 = kalimat keterangan dari C/D/E/F (editable, default tidak tercetak)
+        # DESC2 = kalimat keterangan C/D/E/F (default 0,0 supaya tidak tercetak sampai diposisikan)
         cs2["DESC2"] = {"x": 0.0, "y": 0.0, "size": 9, "bold": False, "underline": False,
                         "align": "left", "from_right": False, "max_width": 350.0}
 
-        # R2/S2 default 0 agar tidak tercetak
-        cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True,
-                     "align": "center", "from_right": False, "max_width": 0.0}
-        cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False,
-                     "align": "center", "from_right": False, "max_width": 135.0}
+        # R2 / S2 (opsional)
+        cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True, "align": "center", "from_right": False, "max_width": 0.0}
+        cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
 
         st.session_state.coord_style_page2 = cs2
 
@@ -250,12 +240,7 @@ def recompute_totals():
 
 
 def get_numeric_value_for_key(key: str) -> int:
-    """
-    Ambil nilai ANGKA murni untuk key:
-      - K: dari parsed_AK['K'] (idr_to_int)
-      - L..Q: dari totals_LQ
-      - lainnya: ekstrak digit (fallback) -> int
-    """
+    """Ambil nilai angka murni untuk key."""
     ak = st.session_state.parsed_AK or {}
     lq = st.session_state.totals_LQ or {}
 
@@ -266,7 +251,6 @@ def get_numeric_value_for_key(key: str) -> int:
             return int(lq.get(key, 0))
         except Exception:
             return 0
-
     raw = ak.get(key, "")
     try:
         return idr_to_int(str(raw))
@@ -275,10 +259,7 @@ def get_numeric_value_for_key(key: str) -> int:
 
 
 def get_value_for_key(key: str) -> str:
-    """
-    Ambil nilai final untuk key A..Q + formatting per 'fmt'.
-    Tambahan aturan: jika angka hasil akhirnya = 0 -> tampilkan "-".
-    """
+    """Ambil nilai final untuk key A..Q + formatting per 'fmt' (0 -> '-')."""
     ov = st.session_state.val_overrides.get(key)
     if ov not in (None, ""):
         if ov.strip().isdigit() and int(ov.strip()) == 0:
@@ -323,9 +304,7 @@ def get_value_for_key(key: str) -> str:
 # PDF rendering utils
 # =========================
 def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]) -> bytes:
-    """
-    Render satu halaman overlay + merge dengan background.
-    """
+    """Render satu halaman overlay + merge dengan background."""
     if not background_pdf_bytes:
         return b""
 
@@ -351,8 +330,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
     c = canvas.Canvas(buf, pagesize=(page_w, page_h))
 
     def wrap_text_by_space(text: str, font_name: str, font_size: float, max_width: float) -> List[str]:
-        """Bungkus teks per spasi agar tiap baris <= max_width. Jika satu kata > max_width, pecah paksa."""
-        from reportlab.pdfbase.pdfmetrics import stringWidth
+        """Bungkus teks per spasi agar tiap baris <= max_width."""
         words = text.split()
         if not words:
             return []
@@ -360,6 +338,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         current = ""
 
         def w(s: str) -> float:
+            from reportlab.pdfbase.pdfmetrics import stringWidth
             return stringWidth(s, font_name, font_size)
 
         for word in words:
@@ -397,7 +376,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
             x0 = x_anchor - width
         elif align == "center":
             x0 = x_anchor - width / 2.0
-        else:  # left
+        else:
             x0 = x_anchor
         y_line = y - max(1.0, font_size * 0.15)
         c.setLineWidth(0.6)
@@ -428,7 +407,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         # Anchor X
         x_anchor = (page_w - x_in) if from_right else x_in
 
-        # Wrapping generic: jika max_width > 0 -> bungkus & gambar per alignment
+        # Wrapping generic
         if max_width > 0:
             lines = wrap_text_by_space(text, font, size, max_width)
             line_height = size * 1.2
@@ -461,7 +440,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
     c.save()
     overlay_pdf = buf.getvalue()
 
-    # Merge
+    # Merge overlay ke base
     try:
         from PyPDF2 import PdfReader, PdfWriter
         overlay_reader = PdfReader(io.BytesIO(overlay_pdf))
@@ -482,9 +461,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
 
 
 def build_pdf_multi_pages(background_pages: List[bytes], items_per_page: List[List[Dict[str, object]]]) -> bytes:
-    """
-    (Multi-halaman) Render setiap halaman dengan background & items masing-masing, gabungkan ke satu PDF.
-    """
+    """Render tiap halaman dan gabungkan ke satu PDF."""
     from PyPDF2 import PdfReader, PdfWriter
     writer = PdfWriter()
     any_page = False
@@ -545,14 +522,13 @@ with tab2:
     if uploaded is not None:
         html_text = uploaded.read().decode("utf-8", errors="ignore")
 
-parse_btn = st.button("🔎 Parse HTML", type="primary", use_container_width=True)
+parse_btn = st.button("🔎 Parse HTML", type="primary", use_container_width=True, key="btn_parse_html")
 
 # ===== Parse A–K =====
 if parse_btn:
     if not html_text or not html_text.strip():
         st.error("Silakan tempel atau unggah HTML terlebih dahulu.")
         st.stop()
-    # Simpan R/S lama agar tidak hilang saat re-parse
     old_r = (st.session_state.parsed_AK or {}).get("R")
     old_s = (st.session_state.parsed_AK or {}).get("S")
     st.session_state.parsed_AK = parse_html_to_A_to_K(html_text)
@@ -649,7 +625,7 @@ st.divider()
 st.subheader("JSON (A–Q)")
 json_str = json.dumps(combined, ensure_ascii=False, indent=2)
 st.code(json_str, language="json")
-st.download_button("💾 Unduh JSON (A–Q)", data=json_str, file_name="trip_A_to_Q.json", mime="application/json", use_container_width=True)
+st.download_button("💾 Unduh JSON (A–Q)", data=json_str, file_name="trip_A_to_Q.json", mime="application/json", use_container_width=True, key="dl_json_aq")
 
 # =========================
 # PDF Overlay 2 Halaman
@@ -739,28 +715,13 @@ if not st.session_state.get("lock_page2_coords", False):
                     conf["align"] = st.selectbox(f"{key} · Align", options=["left", "center", "right"], index=["left","center","right"].index(conf["align"]), key=f"a2_{key}")
                     conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
                     conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
-else:
-    pass  # editor aktif
 
-# Override nilai (opsional) — ikutkan R & S
-with st.expander("✏️ Override Nilai (opsional)", expanded=False):
-    cols = st.columns(4)
-    keys1 = list("ABCDEFGHIJRS")
-    keys2 = list("KLMNOPQ")
-    for i, k in enumerate(keys1):
-        with cols[i % 4]:
-            st.session_state.val_overrides[k] = st.text_input(f"{k} (override)", value=st.session_state.val_overrides.get(k, ""))
-    st.markdown("---")
-    for i, k in enumerate(keys2):
-        with cols[i % 4]:
-            st.session_state.val_overrides[k] = st.text_input(f"{k} (override)", value=st.session_state.val_overrides.get(k, ""))
-
-# Tombol preview & download
+# ===== TOMBOL PREVIEW & DOWNLOAD (HANYA SEKALI, DENGAN KEY UNIK) =====
 pcol1, pcol2 = st.columns(2)
 with pcol1:
-    do_preview = st.button("🔁 Preview PDF (2 Halaman)", use_container_width=True)
+    do_preview = st.button("🔁 Preview PDF (2 Halaman)", use_container_width=True, key="btn_preview_2pages")
 with pcol2:
-    do_download = st.button("⬇️ Download PDF (2 Halaman)", use_container_width=True)
+    do_download = st.button("⬇️ Download PDF (2 Halaman)", use_container_width=True, key="btn_download_2pages")
 
 
 # =========================
@@ -771,7 +732,7 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
     cs = st.session_state.coord_style
     ak = st.session_state.parsed_AK or {}
 
-    # 1) A–E, J kiri (fixed). J kiri = (E-D+1), fallback J parse
+    # 1) A–E, J kiri
     for k in ["A", "B", "C", "D", "E", "J"]:
         style = cs[k]
         x, y = style["x"], style["y"]
@@ -788,7 +749,7 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
         if str(text).strip():
             items.append({"key": k, "text": str(text), "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": False, "align": align})
 
-    # 2) F–I (F editable; G/H/I fixed). G/H center wrap; I center no-wrap underline
+    # 2) F–I
     for k in ["F", "G", "H", "I"]:
         style = cs[k]
         x, y = style["x"], style["y"]
@@ -802,29 +763,15 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
                 item["max_width"] = float(style.get("max_width", 135.0))
             items.append(item)
 
-    # 2b) R & S (halaman 1)
-    r_style = cs["R"]
-    r_txt = (ak.get("R") or "").strip()
+    # 2b) R & S
+    r_style = cs["R"]; r_txt = (ak.get("R") or "").strip()
     if r_txt:
-        items.append({
-            "key": "R", "text": r_txt,
-            "x": r_style["x"], "y": r_style["y"],
-            "size": r_style["size"], "bold": r_style["bold"], "underline": r_style["underline"],
-            "from_right": r_style["from_right"], "align": r_style["align"]
-        })
-
-    s_style = cs["S"]
-    s_txt = (ak.get("S") or "").strip()
+        items.append({"key": "R", "text": r_txt, "x": r_style["x"], "y": r_style["y"], "size": r_style["size"], "bold": r_style["bold"], "underline": r_style["underline"], "from_right": r_style["from_right"], "align": r_style["align"]})
+    s_style = cs["S"]; s_txt = (ak.get("S") or "").strip()
     if s_txt:
-        items.append({
-            "key": "S", "text": s_txt,
-            "x": s_style["x"], "y": s_style["y"],
-            "size": s_style["size"], "bold": s_style["bold"], "underline": s_style["underline"],
-            "from_right": s_style["from_right"], "align": s_style["align"],
-            "max_width": float(s_style.get("max_width", 135.0))
-        })
+        items.append({"key": "S", "text": s_txt, "x": s_style["x"], "y": s_style["y"], "size": s_style["size"], "bold": s_style["bold"], "underline": s_style["underline"], "from_right": s_style["from_right"], "align": s_style["align"], "max_width": float(s_style.get("max_width", 135.0))})
 
-    # 3) K–Q kanan (X dari kanan + rata kanan) — semuanya locked termasuk Q
+    # 3) K–Q kanan
     for k in ["K", "L", "M", "N", "O", "P", "Q"]:
         style = cs[k]
         x, y = style["x"], style["y"]
@@ -833,33 +780,24 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
         if txt:
             items.append({"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": fr, "align": align})
 
-    # 4) Items tambahan: K_DUP, J_RIGHT, A_DUP, Q_DUP (Q_DUP = Q + K)
+    # 4) Extra: K_DUP, J_RIGHT, A_DUP, Q_DUP (Q + K)
     extras = st.session_state.extra_items
 
-    # K_DUP
-    kd = extras["K_DUP"]
-    text_k = get_value_for_key(kd["key"]).strip()
+    kd = extras["K_DUP"]; text_k = get_value_for_key(kd["key"]).strip()
     if text_k:
         items.append({"key": kd["key"], "text": text_k, "x": kd["x"], "y": kd["y"], "size": kd["size"], "bold": kd["bold"], "underline": kd["underline"], "from_right": kd["from_right"], "align": kd["align"]})
 
-    # J_RIGHT (pakai J parse; jika kosong/0 -> "-")
-    jr = extras["J_RIGHT"]
-    raw_j = (st.session_state.parsed_AK or {}).get("J")
+    jr = extras["J_RIGHT"]; raw_j = (st.session_state.parsed_AK or {}).get("J")
     j_digits = "".join(ch for ch in str(raw_j or "") if ch.isdigit())
     j_text = "-" if (j_digits == "" or int(j_digits) == 0) else j_digits
     if j_text:
         items.append({"key": jr["key"], "text": j_text, "x": jr["x"], "y": jr["y"], "size": jr["size"], "bold": jr["bold"], "underline": jr["underline"], "from_right": jr["from_right"], "align": jr["align"]})
 
-    # A_DUP (center, underline, no wrap)
-    ad = extras["A_DUP"]
-    a_text = get_value_for_key(ad["key"]).strip()
+    ad = extras["A_DUP"]; a_text = get_value_for_key(ad["key"]).strip()
     if a_text:
         items.append({"key": ad["key"], "text": a_text, "x": ad["x"], "y": ad["y"], "size": ad["size"], "bold": ad["bold"], "underline": ad["underline"], "from_right": ad["from_right"], "align": ad["align"]})
 
-    # Q_DUP = Q + K  (0 -> "-")
-    qd = extras["Q_DUP"]
-    q_num = get_numeric_value_for_key("Q")
-    k_num = get_numeric_value_for_key("K")
+    qd = extras["Q_DUP"]; q_num = get_numeric_value_for_key("Q"); k_num = get_numeric_value_for_key("K")
     sum_qk = int(q_num) + int(k_num)
     qd_text = "-" if sum_qk == 0 else fmt_n(sum_qk)
     items.append({"key": qd["key"], "text": qd_text, "x": qd["x"], "y": qd["y"], "size": qd["size"], "bold": qd["bold"], "underline": qd["underline"], "from_right": qd["from_right"], "align": qd["align"]})
@@ -869,30 +807,25 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
 
 def _items_page2_from_state() -> List[Dict[str, object]]:
     """
-    Items untuk halaman 2 — SEMUA VALUE dari coord_style_page2.
-    Base value diambil dari A..Q + R/S (tanpa '2').
-
-    - Q2 = ANGKA (Q + K) dengan pemisah ribuan; 0 -> "-"
-    - Q2_TB = TERBILANG (bahasa Indonesia) dari (Q + K) + ' rupiah'
-    - DESC2 = Kalimat keterangan dari C/D/E/F, editable koordinatnya
+    Halaman 2:
+    - Q2 = ANGKA (Q + K) -> "-" jika 0
+    - Q2_TB = TERBILANG (Q + K) + " rupiah"
+    - DESC2 = "Telah sesuai ... ke [C], tanggal [D] s/d [E] dalam rangka [F]."
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
 
     for key, style in cs2.items():
-        x = float(style["x"])
-        y = float(style["y"])
+        x = float(style["x"]); y = float(style["y"])
         if x == 0.0 and y == 0.0:
             continue
 
         if key == "Q2":
-            q_num = get_numeric_value_for_key("Q")
-            k_num = get_numeric_value_for_key("K")
+            q_num = get_numeric_value_for_key("Q"); k_num = get_numeric_value_for_key("K")
             total = int(q_num) + int(k_num)
             text = "-" if total == 0 else fmt_n(total)
         elif key == "Q2_TB":
-            q_num = get_numeric_value_for_key("Q")
-            k_num = get_numeric_value_for_key("K")
+            q_num = get_numeric_value_for_key("Q"); k_num = get_numeric_value_for_key("K")
             total = int(q_num) + int(k_num)
             text = terbilang_rupiah(total) if total != 0 else "nol rupiah"
         elif key == "DESC2":
@@ -903,12 +836,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
             text = f"Telah sesuai sebagaimana adanya digunakan dalam rangka keperluan perjalanan dinas ke {C}, tanggal {D} s/d {E} dalam rangka {F}."
             text = text.strip()
         else:
-            # Map A2->A, ..., Q2->Q, R2->R, S2->S (default)
-            if key.endswith("2"):
-                base_key = key[:-1].upper()
-            else:
-                base_key = key.upper()
-
+            base_key = key[:-1].upper() if key.endswith("2") else key.upper()
             if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
                 text = get_value_for_key(base_key).strip()
             else:
@@ -934,18 +862,11 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
 
 
 # =========================
-# Generate Preview
+# Generate Preview / Download
 # =========================
-pcol1, pcol2 = st.columns(2)
-with pcol1:
-    do_preview = st.button("🔁 Preview PDF (2 Halaman)", use_container_width=True)
-with pcol2:
-    do_download = st.button("⬇️ Download PDF (2 Halaman)", use_container_width=True)
-
 if do_preview:
     bg1 = st.session_state.bg_template_bytes
     bg2 = st.session_state.bg_template2_bytes
-
     if not bg1 or not bg2:
         st.warning("Template halaman 1 dan/atau halaman 2 belum tersedia. Pastikan kedua file ada atau upload manual.")
         st.session_state.preview_pdf = None
@@ -955,7 +876,7 @@ if do_preview:
         pdf_bytes = build_pdf_multi_pages([bg1, bg2], [items1, items2])
         st.session_state.preview_pdf = pdf_bytes if pdf_bytes else None
 
-# Preview (Chrome-safe; pakai <embed>)
+# Preview (pakai <embed>)
 if st.session_state.preview_pdf:
     b64 = base64.b64encode(st.session_state.preview_pdf).decode("utf-8")
     html = f"""
@@ -977,13 +898,9 @@ if st.session_state.preview_pdf:
 else:
     st.info("Preview belum tersedia. Klik **🔁 Preview PDF (2 Halaman)** setelah template & data siap.")
 
-# =========================
-# Download
-# =========================
 if do_download:
     bg1 = st.session_state.bg_template_bytes
     bg2 = st.session_state.bg_template2_bytes
-
     if not bg1 or not bg2:
         st.warning("Template halaman 1 dan/atau halaman 2 belum tersedia. Pastikan kedua file ada atau upload manual.")
     else:
@@ -997,6 +914,7 @@ if do_download:
                 file_name="SPJ_A_to_Q_overlay_2hal.pdf",
                 mime="application/pdf",
                 use_container_width=True,
+                key="dl_pdf_2pages"
             )
         else:
             st.warning("Gagal membuat PDF. Pastikan template & data sudah valid.")
