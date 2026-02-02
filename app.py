@@ -56,6 +56,87 @@ def day_diff_inclusive(D: Optional[str], E: Optional[str]) -> Optional[int]:
 
 
 # =========================
+# Terbilang (Indonesia) untuk Rupiah
+# =========================
+def _terbilang_lt_1000(n: int) -> str:
+    """Terbilang untuk 0..999 (bahasa Indonesia)."""
+    assert 0 <= n < 1000
+    satuan = ["", "satu", "dua", "tiga", "empat", "lima",
+              "enam", "tujuh", "delapan", "sembilan"]
+
+    if n == 0:
+        return ""
+    if n < 10:
+        return satuan[n]
+    if n < 20:
+        if n == 10:
+            return "sepuluh"
+        if n == 11:
+            return "sebelas"
+        return f"{satuan[n-10]} belas"
+    if n < 100:
+        puluh = n // 10
+        sisa = n % 10
+        bagian = f"{satuan[puluh]} puluh"
+        if sisa:
+            bagian += f" {satuan[sisa]}"
+        return bagian
+    # 100..999
+    ratus = n // 100
+    sisa = n % 100
+    if ratus == 1:
+        bagian = "seratus"
+    else:
+        bagian = f"{satuan[ratus]} ratus"
+    if sisa:
+        bagian += f" {_terbilang_lt_1000(sisa)}"
+    return bagian
+
+
+def terbilang_id(n: int) -> str:
+    """Terbilang angka non-negatif dalam bahasa Indonesia (tanpa 'rupiah')."""
+    if n == 0:
+        return "nol"
+    if n < 0:
+        return f"minus {terbilang_id(-n)}"
+
+    bagian = []
+    scales = [
+        (1_000_000_000_000, "triliun"),
+        (1_000_000_000, "miliar"),
+        (1_000_000, "juta"),
+        (1000, "ribu"),
+        (1, ""),
+    ]
+    sisa = n
+    for skala, nama in scales:
+        if sisa >= skala:
+            hitung = sisa // skala
+            sisa = sisa % skala
+            if skala == 1000 and hitung == 1:
+                # 1000 -> "seribu" (bukan "satu ribu")
+                bagian.append("seribu")
+            else:
+                # untuk bagian < 1000 gunakan helper
+                if hitung < 1000:
+                    kata = _terbilang_lt_1000(hitung)
+                else:
+                    # jika > 999 (bisa terjadi di skala=1), pecah lagi
+                    kata = terbilang_id(hitung)
+                if kata:
+                    if nama:
+                        bagian.append(f"{kata} {nama}")
+                    else:
+                        bagian.append(kata)
+    return " ".join(bagian).strip()
+
+
+def terbilang_rupiah(n: int) -> str:
+    """Terbilang + akhiran 'rupiah'."""
+    return f"{terbilang_id(n)} rupiah"
+
+
+# =========================
 # State init
 # =========================
 def ensure_states():
@@ -116,7 +197,7 @@ def ensure_states():
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
         }
 
-    # Koordinat HALAMAN 2 — DIKUNCI (tidak editable)
+    # Koordinat HALAMAN 2 — EDITABLE (dikembalikan bisa diubah dari UI)
     if "coord_style_page2" not in st.session_state:
         cs2 = {}
 
@@ -126,7 +207,7 @@ def ensure_states():
         cs2["G2"] = {"x": 167.0, "y": 641.0, "size": 9, "bold": False, "underline": False,
                      "align": "left", "from_right": False, "max_width": 0.0}
 
-        # K2..Q2 (right-aligned numbers; from_right=True, align=right)
+        # K2..P2 default right-aligned numbers; from_right=True
         def _right_num(x, y, size=9, bold=False):
             return {"x": float(x), "y": float(y), "size": int(size), "bold": bool(bold),
                     "underline": False, "align": "right", "from_right": True, "max_width": 0.0}
@@ -137,9 +218,12 @@ def ensure_states():
         cs2["N2"] = _right_num(118, 470, 9, False)
         cs2["O2"] = _right_num(118, 457.5, 9, False)
         cs2["P2"] = _right_num(118, 445, 9, False)
-        cs2["Q2"] = _right_num(118, 420, 9, False)  # sesuai permintaan (tanpa bold)
 
-        # R2/S2 tetap 0 agar tidak tercetak
+        # Q2 sekarang terbilang -> default left aligned, allow wrapping
+        cs2["Q2"] = {"x": 118.0, "y": 420.0, "size": 9, "bold": False, "underline": False,
+                     "align": "left", "from_right": False, "max_width": 220.0}
+
+        # R2/S2 default 0 agar tidak tercetak
         cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True,
                      "align": "center", "from_right": False, "max_width": 0.0}
         cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False,
@@ -147,8 +231,8 @@ def ensure_states():
 
         st.session_state.coord_style_page2 = cs2
 
-    # Flag untuk menonaktifkan UI editor halaman 2
-    st.session_state["lock_page2_coords"] = True
+    # Pastikan UI editor halaman 2 AKTIF
+    st.session_state["lock_page2_coords"] = False
 
 
 def recompute_totals():
@@ -629,7 +713,7 @@ with cst2:
     ok2 = st.session_state.bg_template2_bytes is not None
     st.markdown(f"Halaman 2: {'✅ Siap' if ok2 else '❌ Belum'}")
 
-# ===== Setting Koordinat — HALAMAN 2 (DIKUNCI) =====
+# ===== Setting Koordinat — HALAMAN 2 (EDITABLE) =====
 if not st.session_state.get("lock_page2_coords", False):
     with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + R2 + S2)", expanded=True):
         st.caption("Atur posisi teks di **halaman 2**. (Tips: isi X/Y ≠ 0 agar tercetak.)")
@@ -656,20 +740,8 @@ if not st.session_state.get("lock_page2_coords", False):
                     conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
                     conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
 else:
-    # Informasi bahwa koordinat halaman 2 dikunci
-    with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + R2 + S2)", expanded=False):
-        st.info(
-            "Koordinat halaman 2 dikunci dan tidak dapat diedit dari UI.\n\n"
-            "- **A2**: x=167, y=653, size=9, align=left\n"
-            "- **G2**: x=167, y=641, size=9, align=left\n"
-            "- **K2**: x=118, y=432, size=9, from_right=True, align=right\n"
-            "- **L2**: x=118, y=482.5, size=9, from_right=True, align=right\n"
-            "- **M2**: x=118, y=495, size=9, from_right=True, align=right\n"
-            "- **N2**: x=118, y=470, size=9, from_right=True, align=right\n"
-            "- **O2**: x=118, y=457.5, size=9, from_right=True, align=right\n"
-            "- **P2**: x=118, y=445, size=9, from_right=True, align=right\n"
-            "- **Q2**: x=118, y=420, size=9, from_right=True, align=right (nilai = Q + K)"
-        )
+    # (Tidak dipakai, karena lock_page2_coords=False)
+    pass
 
 # Override nilai (opsional) — ikutkan R & S
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
@@ -800,7 +872,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     """
     Items untuk halaman 2 — SEMUA VALUE dari coord_style_page2.
     Base value diambil dari A..Q + R/S (tanpa '2').
-    Q2 = Q + K (khusus).
+    Q2 = TERBILANG (bahasa Indonesia) dari (Q + K) + ' rupiah'.
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
@@ -818,12 +890,12 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
             continue
 
         # Ambil teks:
-        # === SPECIAL CASE: Q2 = Q + K ===
         if key == "Q2":
+            # Q2 = terbilang (Q + K) + ' rupiah'
             q_num = get_numeric_value_for_key("Q")  # total reimburse
             k_num = get_numeric_value_for_key("K")  # daily allowance total
             q2_num = int(q_num) + int(k_num)
-            text = "-" if q2_num == 0 else fmt_n(q2_num)
+            text = terbilang_rupiah(q2_num) if q2_num != 0 else "nol rupiah"
         else:
             if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
                 text = get_value_for_key(base_key).strip()
