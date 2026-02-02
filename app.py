@@ -111,7 +111,7 @@ def ensure_states():
     if "extra_items" not in st.session_state:
         st.session_state.extra_items = {
             "K_DUP": {"key": "K", "x": 260.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
-            "J_RIGHT": {"key": "J", "x": 120.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
+            "J_RIGHT": {"key": "J", "x": 110.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
             "A_DUP": {"key": "A", "x": 439.0, "y": 88.0,  "size": 8, "bold": True,  "underline": True,  "from_right": False, "align": "center"},
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
         }
@@ -128,9 +128,9 @@ def ensure_states():
             "D2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
             "E2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
             "F2": {"size": 10,"bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
-            "G2": {"size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0},
-            "H2": {"size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0},
-            "I2": {"size": 8, "bold": True,  "underline": True,  "align": "center", "from_right": False, "max_width": 0.0},
+            "G2": {"size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
+            "H2": {"size": 8, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0},
+            "I2": {"size": 8, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 0.0},
         }
         # K..Q right-anchored by default
         for k in list("ABCDEFGHI"):
@@ -145,6 +145,86 @@ def ensure_states():
         st.session_state.coord_style_page2 = cs2
 
 
+# =========================
+# Koordinat Halaman 2: Preset + Persist
+# =========================
+COORD2_JSON_PATH = "assets/coord_style_page2.json"
+
+def load_coord_page2_from_json(path: str = COORD2_JSON_PATH):
+    try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            for k, v in (data or {}).items():
+                if k in st.session_state.coord_style_page2 and isinstance(v, dict):
+                    st.session_state.coord_style_page2[k].update(v)
+            st.info(f"Koordinat Halaman 2 dimuat dari: {path}")
+    except Exception as e:
+        st.warning(f"Gagal memuat koordinat Halaman 2: {e}")
+
+def save_coord_page2_to_json(path: str = COORD2_JSON_PATH):
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(st.session_state.coord_style_page2, f, ensure_ascii=False, indent=2)
+        st.success(f"Koordinat Halaman 2 tersimpan ke: {path}")
+    except Exception as e:
+        st.error(f"Gagal menyimpan koordinat Halaman 2: {e}")
+
+def apply_coord_overrides_page2():
+    """
+    Terapkan preset koordinat Halaman 2 dari mapping.
+    - HANYA mengisi field numerik (x, y, size) jika saat ini masih 0.
+    - align/from_right/bold/underline/max_width dituliskan hanya jika belum ada kunci tersebut
+      atau dibiarkan sesuai default ketika sudah ada.
+    """
+    cs2 = st.session_state.coord_style_page2
+
+    # === PRESET (berdasarkan screenshot + permintaan terbaru) ===
+    overrides = {
+        # Atas
+        "A2": {"x": 167.0, "y": 652.0, "size": 9,  "align": "left",   "from_right": False, "bold": False, "underline": False, "max_width": 0.0},
+        "G2": {"x": 167.0, "y": 640.0, "size": 9,  "align": "left",   "from_right": False, "bold": False, "underline": False, "max_width": 0.0},
+        "H2": {"x": 0.0,   "y": 0.0,   "size": 8,  "align": "center", "from_right": False, "bold": False, "underline": False, "max_width": 135.0},
+        "I2": {"x": 0.0,   "y": 0.0,   "size": 8,  "align": "center", "from_right": False, "bold": False, "underline": False, "max_width": 0.0},
+
+        # Kolom kanan (angka) — rata kanan, from_right=True
+        "K2": {"x": 118.0, "y": 432.5, "size": 9, "align": "right", "from_right": True, "bold": False, "underline": False, "max_width": 0.0},
+        "L2": {"x": 118.0, "y": 432.5, "size": 9, "align": "right", "from_right": True, "bold": False, "underline": False, "max_width": 0.0},
+        "M2": {"x": 118.0, "y": 495.0, "size": 9, "align": "right", "from_right": True, "bold": False, "underline": False, "max_width": 0.0},
+        "N2": {"x": 118.0, "y": 470.0, "size": 9, "align": "right", "from_right": True, "bold": False, "underline": False, "max_width": 0.0},
+        "O2": {"x": 118.0, "y": 457.5, "size": 9, "align": "right", "from_right": True, "bold": False, "underline": False, "max_width": 0.0},
+        "P2": {"x": 118.0, "y": 445.0, "size": 9, "align": "right", "from_right": True, "bold": False, "underline": False, "max_width": 0.0},
+        "Q2": {"x": 118.0, "y": 420.0, "size": 9, "align": "right", "from_right": True, "bold": True,  "underline": False, "max_width": 0.0},
+
+        # TTD Atasan Halaman 2
+        "R2": {"x": 0.0,   "y": 0.0,   "size": 8, "align": "center", "from_right": False, "bold": True,  "underline": True,  "max_width": 0.0},
+        "S2": {"x": 0.0,   "y": 0.0,   "size": 7, "align": "center", "from_right": False, "bold": False, "underline": False, "max_width": 135.0},
+    }
+
+    numeric_keys = {"x", "y", "size"}
+    for key, spec in overrides.items():
+        if key not in cs2:
+            continue
+        cur = cs2[key]
+        # isi numeric hanya kalau masih 0
+        for fld in numeric_keys:
+            if fld in spec:
+                if float(cur.get(fld, 0.0)) == 0.0 and float(spec[fld]) != 0.0:
+                    cur[fld] = float(spec[fld]) if fld in ("x", "y") else int(spec[fld])
+        # properti lain, tulis jika belum ada (atau biarkan default)
+        for fld in ("align", "from_right", "bold", "underline", "max_width"):
+            if fld in spec and fld not in cur:
+                cur[fld] = spec[fld]
+
+        cs2[key] = cur
+
+    st.session_state.coord_style_page2 = cs2
+
+
+# =========================
+# Recompute totals
+# =========================
 def recompute_totals():
     """Hitung ulang total per jenis dan map ke L..Q"""
     kind_to_letter = {"bensin": "L", "hotel": "M", "toll": "N", "transportasi": "O", "parkir": "P"}
@@ -271,7 +351,8 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         current = ""
 
         def w(s: str) -> float:
-            return stringWidth(s, font_name, font_size)
+            from reportlab.pdfbase.pdfmetrics import stringWidth as sw
+            return sw(s, font_name, font_size)
 
         for word in words:
             candidate = word if not current else f"{current} {word}"
@@ -302,7 +383,8 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
 
     def draw_underlined_text(text: str, x_anchor: float, y: float, align: str, font_name: str, font_size: float):
         """Garis underline di bawah teks sesuai alignment."""
-        width = stringWidth(text, font_name, font_size)
+        from reportlab.pdfbase.pdfmetrics import stringWidth as sw
+        width = sw(text, font_name, font_size)
         if align == "right":
             x0 = x_anchor - width
         elif align == "center":
@@ -325,7 +407,6 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         underline = bool(it.get("underline", False))
         from_right = bool(it.get("from_right", False))
         align = (it.get("align") or "left").lower()
-        key = (it.get("key") or "").upper()
         max_width = float(it.get("max_width", 0.0))
 
         font = "Helvetica-Bold" if bold else "Helvetica"
@@ -339,7 +420,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
         # Anchor X
         x_anchor = (page_w - x_in) if from_right else x_in
 
-        # Wrapping generic: jika max_width > 0 -> bungkus & gambar per alignment
+        # Wrapping generic
         if max_width > 0:
             lines = wrap_text_by_space(text, font, size, max_width)
             line_height = size * 1.2
@@ -375,6 +456,8 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
     # Merge
     try:
         from PyPDF2 import PdfReader, PdfWriter
+        base_reader = PdfReader(io.BytesIO(background_pdf_bytes))
+        base_page = base_reader.pages[0]
         overlay_reader = PdfReader(io.BytesIO(overlay_pdf))
         overlay_page = overlay_reader.pages[0]
         base_page.merge_page(overlay_page)  # pypdf >= 3
@@ -425,6 +508,10 @@ def build_pdf_multi_pages(background_pages: List[bytes], items_per_page: List[Li
 # =========================
 st.set_page_config(page_title="Trip HTML Parser (A–Q) + PDF Overlay (2 Halaman)", page_icon="🧭", layout="wide")
 ensure_states()
+
+# === MUAT KOORD & TERAPKAN PRESET NON-ZERO ===
+load_coord_page2_from_json()
+apply_coord_overrides_page2()
 
 st.title("🧭 Trip HTML Parser (A–Q)")
 st.caption("Tempel/unggah HTML → A–K → Reimburse → L–Q → PDF 2 Halaman (otomatis).")
@@ -649,7 +736,6 @@ with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + R2 + S2)", expanded=True):
                 conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
                 conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
 
-# Override nilai (opsional) — ikutkan R & S
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
     cols = st.columns(4)
     keys1 = list("ABCDEFGHIJRS")
@@ -661,6 +747,14 @@ with st.expander("✏️ Override Nilai (opsional)", expanded=False):
     for i, k in enumerate(keys2):
         with cols[i % 4]:
             st.session_state.val_overrides[k] = st.text_input(f"{k} (override)", value=st.session_state.val_overrides.get(k, ""))
+
+with st.expander("💾 Simpan/Muat Koordinat Halaman 2", expanded=False):
+    c1, c2 = st.columns(2)
+    if c1.button("💾 Simpan ke JSON", use_container_width=True):
+        save_coord_page2_to_json()
+    if c2.button("📥 Muat dari JSON", use_container_width=True):
+        load_coord_page2_from_json()
+        st.rerun()
 
 # Tombol preview & download
 pcol1, pcol2 = st.columns(2)
@@ -788,9 +882,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
         base_key = key[:-1] if key.endswith("2") else key
         base_key = base_key.upper()
 
-        # Ambil teks dari base value:
-        # - untuk A..Q / R / S gunakan get_value_for_key(base_key)
-        # - skip jika X/Y = 0 agar tidak tercetak accidental
+        # Skip jika X/Y = 0 agar tidak tercetak accidental
         x = float(style["x"])
         y = float(style["y"])
         if x == 0.0 and y == 0.0:
@@ -800,7 +892,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
         if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
             text = get_value_for_key(base_key).strip()
         else:
-            text = ""  # unknown keys
+            text = ""
         if not text:
             continue
 
@@ -823,6 +915,8 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
 # =========================
 # Generate Preview
 # =========================
+do_preview = 'do_preview' in locals() and do_preview  # quiet linter
+
 if do_preview:
     bg1 = st.session_state.bg_template_bytes
     bg2 = st.session_state.bg_template2_bytes
