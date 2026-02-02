@@ -11,6 +11,17 @@ from src.parser import parse_html_to_A_to_K
 
 
 # =========================
+# Konfigurasi UI (dev toggle)
+# =========================
+# Secara default, sembunyikan menu overlay PDF, status template, dan pengaturan koordinat.
+# Jika perlu debug/develop, set env: SHOW_OVERLAY_UI=1 atau di runtime:
+# st.session_state["SHOW_OVERLAY_UI"] = True
+SHOW_OVERLAY_UI_DEFAULT = False
+SHOW_OVERLAY_UI = bool(int(os.getenv("SHOW_OVERLAY_UI", "1" if SHOW_OVERLAY_UI_DEFAULT else "0")))
+SHOW_OVERLAY_UI = st.session_state.get("SHOW_OVERLAY_UI", SHOW_OVERLAY_UI)
+
+
+# =========================
 # Helpers
 # =========================
 def idr_to_int(s: str) -> int:
@@ -243,24 +254,27 @@ def ensure_states():
         cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True, "align": "center", "from_right": False, "max_width": 0.0}
         cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
 
-        # ===== Tambahan custom (editable): CITY_TODAY, A2_AGAIN, G2_AGAIN =====
+        # ===== Tambahan custom (disimpan sesuai template yang kamu minta) =====
+        # CITY_TODAY: "Jakarta, [tanggal hari ini]"
         cs2["CITY_TODAY"] = {
-            "x": 0.0, "y": 0.0, "size": 9, "bold": False, "underline": False,
-            "align": "left", "from_right": False, "max_width": 350.0
+            "x": 180.0, "y": 300.0, "size": 9, "bold": False, "underline": False,
+            "align": "center", "from_right": True, "max_width": 0.0
         }
+        # A2_AGAIN: value A
         cs2["A2_AGAIN"] = {
-            "x": 0.0, "y": 0.0, "size": 9, "bold": False, "underline": False,
-            "align": "left", "from_right": False, "max_width": 250.0
+            "x": 180.0, "y": 225.0, "size": 9, "bold": True, "underline": True,
+            "align": "center", "from_right": True, "max_width": 0.0
         }
+        # G2_AGAIN: value G
         cs2["G2_AGAIN"] = {
-            "x": 0.0, "y": 0.0, "size": 9, "bold": False, "underline": False,
-            "align": "left", "from_right": False, "max_width": 250.0
+            "x": 180.0, "y": 212.0, "size": 9, "bold": False, "underline": False,
+            "align": "center", "from_right": True, "max_width": 0.0
         }
 
         st.session_state.coord_style_page2 = cs2
 
-    # Editor halaman 2 AKTIF
-    st.session_state["lock_page2_coords"] = False
+    # Lock editor halaman 2 (tidak ditampilkan di UI)
+    st.session_state["lock_page2_coords"] = not SHOW_OVERLAY_UI
 
 
 def recompute_totals():
@@ -535,8 +549,8 @@ with st.expander("Cara pakai (singkat)", expanded=False):
     st.markdown(
         "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
         "- **Langkah 2**: Isi **Data Atasan (R/S)** dan **Reimburse** untuk menghasilkan L–Q.\n"
-        "- **Langkah 3**: Siapkan **template PDF** (`assets/spj_blank.pdf` & `assets/spj_blank2.pdf`) atau upload manual.\n"
-        "- **Langkah 4**: Atur **Koordinat Halaman 2** (A2..Q2 + **Q2_TB** + **DESC2** + **CITY_TODAY/A2_AGAIN/G2_AGAIN**) sesuai layout.\n"
+        "- **Langkah 3**: Siapkan **template PDF** (`assets/spj_blank.pdf` & `assets/spj_blank2.pdf`).\n"
+        "- **Langkah 4**: (Opsional/dev) Atur **Koordinat Halaman 2** bila `SHOW_OVERLAY_UI` aktif.\n"
         "- **Langkah 5**: Preview & Download — otomatis **2 halaman**."
     )
 
@@ -667,74 +681,76 @@ st.download_button("💾 Unduh JSON (A–Q)", data=json_str, file_name="trip_A_t
 # PDF Overlay 2 Halaman
 # =========================
 st.divider()
-st.subheader("📄 PDF Overlay (2 Halaman)")
+# TIDAK menampilkan judul/menu overlay jika SHOW_OVERLAY_UI False
+if SHOW_OVERLAY_UI:
+    st.subheader("📄 PDF Overlay (2 Halaman)")
 
-# Template Halaman 1
+# Template Halaman 1 (auto-load dari default path)
 DEFAULT_BG_PATH = os.environ.get("SPJ_BG_PATH", "assets/spj_blank.pdf")
 if not st.session_state.bg_template_bytes:
     try:
         if os.path.exists(DEFAULT_BG_PATH):
             with open(DEFAULT_BG_PATH, "rb") as f:
                 st.session_state.bg_template_bytes = f.read()
-            st.info(f"Template halaman 1 di-load dari: {DEFAULT_BG_PATH}")
         else:
-            st.warning("Template halaman 1 belum ditemukan (assets/spj_blank.pdf). Unggah manual di bawah.")
+            if SHOW_OVERLAY_UI:
+                st.warning("Template halaman 1 belum ditemukan (assets/spj_blank.pdf). Unggah manual di bawah.")
     except Exception as e:
-        st.warning(f"Tidak bisa membaca {DEFAULT_BG_PATH}: {e}")
+        if SHOW_OVERLAY_UI:
+            st.warning(f"Tidak bisa membaca {DEFAULT_BG_PATH}: {e}")
 
-tpl_up = st.file_uploader("Upload template PDF HALAMAN 1 (1 halaman)", type=["pdf"], key="upl_pg1")
-if tpl_up is not None:
-    st.session_state.bg_template_bytes = tpl_up.read()
-    st.session_state.preview_pdf = None
-    st.success("Template Halaman 1 berhasil dimuat dari upload.")
-
-# Template Halaman 2
+# Template Halaman 2 (auto-load dari default path)
 DEFAULT_BG2_PATH = os.environ.get("SPJ_BG2_PATH", "assets/spj_blank2.pdf")
 if not st.session_state.bg_template2_bytes:
     try:
         if os.path.exists(DEFAULT_BG2_PATH):
             with open(DEFAULT_BG2_PATH, "rb") as f:
                 st.session_state.bg_template2_bytes = f.read()
-            st.info(f"Template halaman 2 di-load dari: {DEFAULT_BG2_PATH}")
         else:
             fallback = "assets/spj_blank2"
             if os.path.exists(fallback):
                 with open(fallback, "rb") as f:
                     st.session_state.bg_template2_bytes = f.read()
-                st.info(f"Template halaman 2 di-load dari: {fallback}")
             else:
-                st.warning("Template halaman 2 belum ditemukan (assets/spj_blank2.pdf). Unggah manual di bawah.")
+                if SHOW_OVERLAY_UI:
+                    st.warning("Template halaman 2 belum ditemukan (assets/spj_blank2.pdf). Unggah manual di bawah.")
     except Exception as e:
-        st.warning(f"Tidak bisa membaca {DEFAULT_BG2_PATH}: {e}")
+        if SHOW_OVERLAY_UI:
+            st.warning(f"Tidak bisa membaca {DEFAULT_BG2_PATH}: {e}")
 
-tpl2_up = st.file_uploader("Upload template PDF HALAMAN 2 (1 halaman)", type=["pdf"], key="upl_pg2")
-if tpl2_up is not None:
-    st.session_state.bg_template2_bytes = tpl2_up.read()
-    st.session_state.preview_pdf = None
-    st.success("Template Halaman 2 berhasil dimuat dari upload.")
+# ===== (DISEMBUNYIKAN) Upload template & Status template =====
+if SHOW_OVERLAY_UI:
+    tpl_up = st.file_uploader("Upload template PDF HALAMAN 1 (1 halaman)", type=["pdf"], key="upl_pg1")
+    if tpl_up is not None:
+        st.session_state.bg_template_bytes = tpl_up.read()
+        st.session_state.preview_pdf = None
+        st.success("Template Halaman 1 berhasil dimuat dari upload.")
 
-# Status template
-st.write("### Status Template")
-cst1, cst2 = st.columns(2)
-with cst1:
-    ok1 = st.session_state.bg_template_bytes is not None
-    st.markdown(f"Halaman 1: {'✅ Siap' if ok1 else '❌ Belum'}")
-with cst2:
-    ok2 = st.session_state.bg_template2_bytes is not None
-    st.markdown(f"Halaman 2: {'✅ Siap' if ok2 else '❌ Belum'}")
+    tpl2_up = st.file_uploader("Upload template PDF HALAMAN 2 (1 halaman)", type=["pdf"], key="upl_pg2")
+    if tpl2_up is not None:
+        st.session_state.bg_template2_bytes = tpl2_up.read()
+        st.session_state.preview_pdf = None
+        st.success("Template Halaman 2 berhasil dimuat dari upload.")
 
-# ===== Setting Koordinat — HALAMAN 2 (EDITABLE) =====
-if not st.session_state.get("lock_page2_coords", False):
+    st.write("### Status Template")
+    cst1, cst2 = st.columns(2)
+    with cst1:
+        ok1 = st.session_state.bg_template_bytes is not None
+        st.markdown(f"Halaman 1: {'✅ Siap' if ok1 else '❌ Belum'}")
+    with cst2:
+        ok2 = st.session_state.bg_template2_bytes is not None
+        st.markdown(f"Halaman 2: {'✅ Siap' if ok2 else '❌ Belum'}")
+
+# ===== (DISEMBUNYIKAN) Setting Koordinat — HALAMAN 2 =====
+if SHOW_OVERLAY_UI and not st.session_state.get("lock_page2_coords", False):
     with st.expander("📍 Koordinat Halaman 2 (A2..Q2 + Q2_TB + DESC2 + R2 + S2 + CUSTOM)", expanded=True):
         st.caption("Atur posisi teks di **halaman 2**. (Tips: isi X/Y ≠ 0 agar tercetak.)")
         cs2 = st.session_state.coord_style_page2
 
-        # urutan tampilan — tambahkan CITY_TODAY, A2_AGAIN, G2_AGAIN
         order_keys = [f"{k}2" for k in list("ABCDEFGHI")] + \
                      [f"{k}2" for k in list("KLMNOPQ")] + \
                      ["Q2_TB", "DESC2", "CITY_TODAY", "A2_AGAIN", "G2_AGAIN", "R2", "S2"]
 
-        # grid 3 kolom per baris
         for chunk_start in range(0, len(order_keys), 3):
             cols = st.columns(3)
             for i, key in enumerate(order_keys[chunk_start:chunk_start+3]):
@@ -752,7 +768,7 @@ if not st.session_state.get("lock_page2_coords", False):
                     conf["from_right"] = st.checkbox(f"{key} · From right", value=bool(conf["from_right"]), key=f"fr2_{key}")
                     conf["max_width"] = st.number_input(f"{key} · Max width", value=float(conf.get("max_width", 0.0)), min_value=0.0, step=1.0, key=f"mw2_{key}")
 
-# ===== TOMBOL PREVIEW & DOWNLOAD (HANYA SEKALI, DENGAN KEY UNIK) =====
+# ===== TOMBOL PREVIEW & DOWNLOAD =====
 pcol1, pcol2 = st.columns(2)
 with pcol1:
     do_preview = st.button("🔁 Preview PDF (2 Halaman)", use_container_width=True, key="btn_preview_2pages")
@@ -909,17 +925,18 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
 # =========================
 # Generate Preview / Download
 # =========================
-if do_preview:
-    bg1 = st.session_state.bg_template_bytes
-    bg2 = st.session_state.bg_template2_bytes
-    if not bg1 or not bg2:
-        st.warning("Template halaman 1 dan/atau halaman 2 belum tersedia. Pastikan kedua file ada atau upload manual.")
-        st.session_state.preview_pdf = None
-    else:
+p1 = st.session_state.bg_template_bytes
+p2 = st.session_state.bg_template2_bytes
+
+# Tombol tetap tampil agar user bisa membuat PDF
+if p1 and p2:
+    if st.button("🔁 Preview PDF (2 Halaman)", use_container_width=True, key="btn_preview_2pages_top"):
         items1 = _items_page1_from_state()
         items2 = _items_page2_from_state()
-        pdf_bytes = build_pdf_multi_pages([bg1, bg2], [items1, items2])
+        pdf_bytes = build_pdf_multi_pages([p1, p2], [items1, items2])
         st.session_state.preview_pdf = pdf_bytes if pdf_bytes else None
+else:
+    st.info("Template PDF belum tersedia di path default. Pastikan file ada di `assets/spj_blank.pdf` dan `assets/spj_blank2.pdf`.")
 
 # Preview (pakai <embed>)
 if st.session_state.preview_pdf:
@@ -943,23 +960,19 @@ if st.session_state.preview_pdf:
 else:
     st.info("Preview belum tersedia. Klik **🔁 Preview PDF (2 Halaman)** setelah template & data siap.")
 
-if do_download:
-    bg1 = st.session_state.bg_template_bytes
-    bg2 = st.session_state.bg_template2_bytes
-    if not bg1 or not bg2:
-        st.warning("Template halaman 1 dan/atau halaman 2 belum tersedia. Pastikan kedua file ada atau upload manual.")
+# Download
+if p1 and p2 and st.button("⬇️ Download PDF (2 Halaman)", use_container_width=True, key="btn_download_2pages_bottom"):
+    items1 = _items_page1_from_state()
+    items2 = _items_page2_from_state()
+    pdf_bytes = build_pdf_multi_pages([p1, p2], [items1, items2])
+    if pdf_bytes:
+        st.download_button(
+            "⬇️ Klik untuk mengunduh PDF (2 Halaman)",
+            data=pdf_bytes,
+            file_name="SPJ_A_to_Q_overlay_2hal.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key="dl_pdf_2pages"
+        )
     else:
-        items1 = _items_page1_from_state()
-        items2 = _items_page2_from_state()
-        pdf_bytes = build_pdf_multi_pages([bg1, bg2], [items1, items2])
-        if pdf_bytes:
-            st.download_button(
-                "⬇️ Klik untuk mengunduh PDF (2 Halaman)",
-                data=pdf_bytes,
-                file_name="SPJ_A_to_Q_overlay_2hal.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-                key="dl_pdf_2pages"
-            )
-        else:
-            st.warning("Gagal membuat PDF. Pastikan template & data sudah valid.")
+        st.warning("Gagal membuat PDF. Pastikan template & data sudah valid.")
