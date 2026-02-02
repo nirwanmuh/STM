@@ -76,40 +76,7 @@ def ensure_states():
     if "val_overrides" not in st.session_state:
         st.session_state.val_overrides: Dict[str, str] = {}
 
-    # ✅ Extra items (DIDEFAULTKAN agar tidak AttributeError)
-    if "extra_items" not in st.session_state:
-        st.session_state.extra_items = {
-            # Duplikasi K (mis. untuk posisi lain di halaman 1)
-            "K_DUP": {
-                "key": "K",
-                "x": 260.0, "y": 200.0,  # silakan sesuaikan
-                "size": 9, "bold": False, "underline": False,
-                "from_right": True, "align": "right",
-            },
-            # J di sisi kanan (pakai angka dari raw J, bukan (E-D+1))
-            "J_RIGHT": {
-                "key": "J",
-                "x": 300.0, "y": 600.0,  # silakan sesuaikan
-                "size": 9, "bold": False, "underline": False,
-                "from_right": False, "align": "left",
-            },
-            # Duplikasi A (Employee Name) di posisi lain halaman 1
-            "A_DUP": {
-                "key": "A",
-                "x": 190.0, "y": 690.0,  # silakan sesuaikan
-                "size": 9, "bold": False, "underline": False,
-                "from_right": False, "align": "left",
-            },
-            # Q_DUP = Q + K (total reimburse + uang harian)
-            "Q_DUP": {
-                "key": "Q",  # diisi nilai penjumlahan Q+K saat render
-                "x": 260.0, "y": 215.0,  # silakan sesuaikan
-                "size": 9, "bold": True, "underline": False,
-                "from_right": True, "align": "right",
-            },
-        }
-
-    # Koordinat HALAMAN 1 (fixed; tidak muncul di UI)
+    # Koordinat HALAMAN 1 (fixed; sesuai snippet yang Mas minta)
     if "coord_style" not in st.session_state:
         st.session_state.coord_style = {
             # A–E, J kiri (fixed). J kiri ditulis di (190,600,size=9) dengan nilai (E-D+1).
@@ -122,35 +89,43 @@ def ensure_states():
 
             # F–I:
             "F": {"x": 0.0,   "y": 0.0,   "size": 10, "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "left",   "locked": False},
-            "G": {"x": 439.0, "y": 78.0,  "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True,  "max_width": 135.0},
+            "G": {"x": 167.0, "y": 78.0,  "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True,  "max_width": 135.0},
             "H": {"x": 124.0, "y": 78.0,  "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True,  "max_width": 135.0},
             "I": {"x": 124.0, "y": 88.0,  "size": 8,  "bold": True,  "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
 
-            # K–Q: X dari kanan & rata kanan (fixed).
-            "K": {"x": 260.0, "y": 520.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "L": {"x": 260.0, "y": 313.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "M": {"x": 260.0, "y": 299.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "N": {"x": 260.0, "y": 286.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "O": {"x": 260.0, "y": 273.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "P": {"x": 260.0, "y": 260.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
-            "Q": {"x": 260.0, "y": 227.0, "size": 9,  "bold": True,  "underline": False, "fmt": "number", "from_right": True, "align": "right", "locked": True},
+            # K–Q (Halaman 1) — sesuai snippet Mas (banyak yang rata kanan dari sisi kanan = from_right=True)
+            "K": {"x": 260.0, "y": 520.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True,  "align": "right", "locked": True},
+            "L": {"x": 118.0, "y": 432.5, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True,  "align": "right", "locked": True},
+            "M": {"x": 118.0, "y": 405.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True,  "align": "right", "locked": True},
+            "N": {"x": 118.0, "y": 470.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True,  "align": "right", "locked": True},
+            "O": {"x": 118.0, "y": 457.5, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True,  "align": "right", "locked": True},
+            "P": {"x": 118.0, "y": 445.0, "size": 9,  "bold": False, "underline": False, "fmt": "number", "from_right": True,  "align": "right", "locked": True},
+            "Q": {"x": 260.0, "y": 227.0, "size": 9,  "bold": True,  "underline": False, "fmt": "number", "from_right": True,  "align": "right", "locked": True},
 
             # R & S (atasan) — style halaman 1 (fixed)
             "R": {"x": 281.0, "y": 88.0, "size": 8, "bold": True, "underline": True,  "fmt": "raw", "from_right": False, "align": "center", "locked": True},
             "S": {"x": 281.0, "y": 78.0, "size": 7,  "bold": False, "underline": False, "fmt": "raw", "from_right": False, "align": "center", "locked": True, "max_width": 135.0},
         }
 
-    # HALAMAN 2 — kita kunci via konstanta (lihat bawah)
+    # ✅ Item duplikasi (hard-coded) — HALAMAN 1 — sesuai snippet Mas
+    if "extra_items" not in st.session_state:
+        st.session_state.extra_items = {
+            "K_DUP":   {"key": "K", "x": 260.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
+            "J_RIGHT": {"key": "J", "x": 110.0, "y": 534.0, "size": 9, "bold": False, "underline": False, "from_right": True,  "align": "right"},
+            "A_DUP":   {"key": "A", "x": 439.0, "y": 88.0,  "size": 8, "bold": True,  "underline": True,  "from_right": False, "align": "center"},
+            "Q_DUP":   {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True,  "underline": False, "from_right": True,  "align": "right"},
+        }
+
+    # HALAMAN 2 — koor/style dikunci (READ-ONLY, stabil)
     if "coord_style_page2" not in st.session_state:
-        st.session_state.coord_style_page2 = {}  # akan diisi konstanta terkunci (read-only)
+        st.session_state.coord_style_page2 = {}  # akan diisi konstanta di bawah
 
 
 # =========================
 # HALAMAN 2 — Koordinat & Style Dikunci (READ-ONLY)
 # =========================
-# Semua key ada agar konsisten, tapi hanya yang punya X/Y != 0 yang akan tercetak.
 COORD_STYLE_PAGE2_LOCKED: Dict[str, Dict[str, object]] = {
-    # A..I (yang dipakai sesuai screenshot)
+    # A..I (yang dipakai sesuai layout lama stabil)
     "A2": {"x": 167.0, "y": 653.0, "size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
     "B2": {"x": 0.0,   "y": 0.0,   "size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
     "C2": {"x": 0.0,   "y": 0.0,   "size": 9, "bold": False, "underline": False, "align": "left",   "from_right": False, "max_width": 0.0},
@@ -171,16 +146,13 @@ COORD_STYLE_PAGE2_LOCKED: Dict[str, Dict[str, object]] = {
     # Q2 spesial → value = Q + K, tampil bold
     "Q2": {"x": 118.0, "y": 420.0, "size": 9, "bold": True,  "underline": False, "align": "right", "from_right": True, "max_width": 0.0},
 
-    # TTD Atasan Hal2 (biarkan 0 jika belum dipakai)
+    # TTD Atasan Hal2
     "R2": {"x": 0.0,   "y": 0.0,   "size": 8, "bold": True,  "underline": True,  "align": "center", "from_right": False, "max_width": 0.0},
     "S2": {"x": 0.0,   "y": 0.0,   "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0},
 }
 
 def lock_and_apply_page2_coords():
-    """
-    Mengunci koordinat/style Halaman 2: salin konstanta ke session state
-    dan tandai read-only (tidak ada UI edit).
-    """
+    """Mengunci koordinat/style Halaman 2: salin konstanta ke session state."""
     st.session_state.coord_style_page2 = {k: dict(v) for k, v in COORD_STYLE_PAGE2_LOCKED.items()}
     st.session_state.page2_locked = True
 
@@ -410,7 +382,7 @@ def _render_one_page(background_pdf_bytes: bytes, items: List[Dict[str, object]]
     c.save()
     overlay_pdf = buf.getvalue()
 
-    # Merge
+    # Merge overlay ke background
     try:
         from PyPDF2 import PdfReader, PdfWriter
         base_reader = PdfReader(io.BytesIO(background_pdf_bytes))
@@ -465,8 +437,6 @@ def build_pdf_multi_pages(background_pages: List[bytes], items_per_page: List[Li
 # =========================
 st.set_page_config(page_title="Trip HTML Parser (A–Q) + PDF Overlay (2 Halaman)", page_icon="🧭", layout="wide")
 ensure_states()
-
-# Terapkan & kunci koordinat halaman 2
 lock_and_apply_page2_coords()
 
 st.title("🧭 Trip HTML Parser (A–Q)")
@@ -666,9 +636,7 @@ with cst2:
     ok2 = st.session_state.bg_template2_bytes is not None
     st.markdown(f"Halaman 2: {'✅ Siap' if ok2 else '❌ Belum'}")
 
-# (Tidak ada expander edit Halaman 2 karena sudah dikunci)
-
-# ===== Override Nilai (opsional) — tetap tersedia =====
+# ===== Override Nilai (opsional)
 with st.expander("✏️ Override Nilai (opsional)", expanded=False):
     cols = st.columns(4)
     keys1 = list("ABCDEFGHIJRS")
@@ -716,12 +684,7 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
         else:
             text = get_value_for_key(k)
         if str(text).strip():
-            items.append(
-                {
-                    "key": k, "text": str(text), "x": x, "y": y, "size": size,
-                    "bold": bold, "underline": ul, "from_right": False, "align": align
-                }
-            )
+            items.append({"key": k, "text": str(text), "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": False, "align": align})
 
     # 2) F–I
     for k in ["F", "G", "H", "I"]:
@@ -732,10 +695,7 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
         if k == "F" and (x == 0 and y == 0):
             continue
         if txt:
-            item = {
-                "key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold,
-                "underline": ul, "from_right": fr, "align": align
-            }
+            item = {"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": fr, "align": align}
             if k in ["G", "H"]:
                 item["max_width"] = float(style.get("max_width", 135.0))
             items.append(item)
@@ -769,69 +729,38 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
         size, bold, fr, align, ul = style["size"], style["bold"], style["from_right"], style["align"], style["underline"]
         txt = get_value_for_key(k).strip()
         if txt:
-            items.append(
-                {"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold,
-                 "underline": ul, "from_right": fr, "align": align}
-            )
+            items.append({"key": k, "text": txt, "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": fr, "align": align})
 
-    # 4) Extra items (AMAN: gunakan get + cek key)
+    # 4) Extra items — aman: pakai get()
     extras = st.session_state.get("extra_items", {})
 
-    # K_DUP
     kd = extras.get("K_DUP")
     if kd:
         text_k = get_value_for_key(kd["key"]).strip()
         if text_k:
-            items.append({
-                "key": kd["key"], "text": text_k,
-                "x": kd["x"], "y": kd["y"],
-                "size": kd["size"], "bold": kd["bold"],
-                "underline": kd["underline"],
-                "from_right": kd["from_right"], "align": kd["align"]
-            })
+            items.append({"key": kd["key"], "text": text_k, "x": kd["x"], "y": kd["y"], "size": kd["size"], "bold": kd["bold"], "underline": kd["underline"], "from_right": kd["from_right"], "align": kd["align"]})
 
-    # J_RIGHT (pakai raw J)
     jr = extras.get("J_RIGHT")
     if jr:
         raw_j = (st.session_state.parsed_AK or {}).get("J")
         j_digits = "".join(ch for ch in str(raw_j or "") if ch.isdigit())
         j_text = "-" if (j_digits == "" or int(j_digits) == 0) else j_digits
         if j_text:
-            items.append({
-                "key": jr["key"], "text": j_text,
-                "x": jr["x"], "y": jr["y"],
-                "size": jr["size"], "bold": jr["bold"],
-                "underline": jr["underline"],
-                "from_right": jr["from_right"], "align": jr["align"]
-            })
+            items.append({"key": jr["key"], "text": j_text, "x": jr["x"], "y": jr["y"], "size": jr["size"], "bold": jr["bold"], "underline": jr["underline"], "from_right": jr["from_right"], "align": jr["align"]})
 
-    # A_DUP
     ad = extras.get("A_DUP")
     if ad:
         a_text = get_value_for_key(ad["key"]).strip()
         if a_text:
-            items.append({
-                "key": ad["key"], "text": a_text,
-                "x": ad["x"], "y": ad["y"],
-                "size": ad["size"], "bold": ad["bold"],
-                "underline": ad["underline"],
-                "from_right": ad["from_right"], "align": ad["align"]
-            })
+            items.append({"key": ad["key"], "text": a_text, "x": ad["x"], "y": ad["y"], "size": ad["size"], "bold": ad["bold"], "underline": ad["underline"], "from_right": ad["from_right"], "align": ad["align"]})
 
-    # Q_DUP = Q + K
     qd = extras.get("Q_DUP")
     if qd:
         q_num = get_numeric_value_for_key("Q")
         k_num = get_numeric_value_for_key("K")
         sum_qk = int(q_num) + int(k_num)
         qd_text = "-" if sum_qk == 0 else fmt_n(sum_qk)
-        items.append({
-            "key": qd["key"], "text": qd_text,
-            "x": qd["x"], "y": qd["y"],
-            "size": qd["size"], "bold": qd["bold"],
-            "underline": qd["underline"],
-            "from_right": qd["from_right"], "align": qd["align"]
-        })
+        items.append({"key": qd["key"], "text": qd_text, "x": qd["x"], "y": qd["y"], "size": qd["size"], "bold": qd["bold"], "underline": qd["underline"], "from_right": qd["from_right"], "align": qd["align"]})
 
     return items
 
@@ -846,7 +775,6 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
 
-    # Q2 khusus: Q + K
     q_sum = get_numeric_value_for_key("Q") + get_numeric_value_for_key("K")
     q2_text = "-" if int(q_sum) == 0 else fmt_n(int(q_sum))
 
@@ -858,7 +786,6 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
         if x == 0.0 and y == 0.0:
             continue  # tidak tercetak
 
-        # Ambil teks
         if key == "Q2":
             text = q2_text
         elif base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
