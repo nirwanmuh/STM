@@ -546,7 +546,7 @@ with st.expander("Cara pakai (singkat)", expanded=False):
     st.markdown(
         "- **Langkah 1**: Paste/Unggah HTML, klik **Parse HTML** \n"
         "- **Langkah 2**: Buka **Data Atasan** dan **Reimburse** (Opsional), isi datanya.\n"
-        "- **Langkah 3**: Klik **Generate PDF (2 Halaman)** lalu **Download**."
+        "- **Langkah 3**: Klik **Generate PDF** lalu **Download**."
     )
 
 # ===== Input HTML =====
@@ -823,7 +823,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
 st.divider()
 st.subheader("📄 Generate & Download PDF")
 
-btn_generate = st.button("⚙️ Generate PDF (2 Halaman)", use_container_width=True, key="btn_generate_pdf")
+btn_generate = st.button("⚙️ Generate PDF", use_container_width=True, key="btn_generate_pdf")
 
 if btn_generate:
     bg1 = st.session_state.bg_template_bytes
@@ -842,7 +842,7 @@ if btn_generate:
 
 if st.session_state.get("preview_pdf"):
     st.download_button(
-        "⬇️ Download PDF (2 Halaman)",
+        "⬇️ Download PDF",
         data=st.session_state.preview_pdf,
         file_name="SPJ_A_to_Q_overlay_2hal.pdf",
         mime="application/pdf",
