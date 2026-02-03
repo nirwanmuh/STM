@@ -597,17 +597,6 @@ if parse_btn:
         st.session_state.parsed_AK["NIK"] = old_nik
     st.success("HTML berhasil diparse.")
 
-# ===== Data Atasan (R & S) — collapsible =====
-with st.expander("👤 Data Atasan (Opsional)", expanded=False):
-    with st.form("atasan_form", clear_on_submit=False):
-        r_input = st.text_input("Nama atasan", value=(st.session_state.parsed_AK.get("R") or ""), placeholder="nama atasan")
-        s_input = st.text_input("Jabatan atasan", value=(st.session_state.parsed_AK.get("S") or ""), placeholder="jabatan atasan")
-        submit_rs = st.form_submit_button("💾 Simpan Atasan", use_container_width=True)
-        if submit_rs:
-            st.session_state.parsed_AK["R"] = r_input.strip()
-            st.session_state.parsed_AK["S"] = s_input.strip()
-            st.success("Data atasan disimpan (R & S).")
-
 # ===== Data Karyawan (NIK) — collapsible =====
 with st.expander("🪪 Data Karyawan (NIK)", expanded=False):
     with st.form("nik_form", clear_on_submit=False):
@@ -670,6 +659,65 @@ with st.expander("🧾 Reimburse (Opsional)", expanded=False):
     tcols[3].metric("**O – Transportasi**", fmt_idr(totals["O"]))
     tcols[4].metric("**P – Parkir**", fmt_idr(totals["P"]))
     tcols[5].metric("**Q – Total Semua**", fmt_idr(totals["Q"]))
+
+# ===== Data Atasan (R & S) — collapsible =====
+with st.expander("👤 Data Atasan (Opsional)", expanded=False):
+    with st.form("atasan_form", clear_on_submit=False):
+        r_input = st.text_input("Nama atasan", value=(st.session_state.parsed_AK.get("R") or ""), placeholder="nama atasan")
+        s_input = st.text_input("Jabatan atasan", value=(st.session_state.parsed_AK.get("S") or ""), placeholder="jabatan atasan")
+        submit_rs = st.form_submit_button("💾 Simpan Atasan", use_container_width=True)
+        if submit_rs:
+            st.session_state.parsed_AK["R"] = r_input.strip()
+            st.session_state.parsed_AK["S"] = s_input.strip()
+            st.success("Data atasan disimpan (R & S).")
+
+# ===== Override Nilai H & I — collapsible =====
+with st.expander("✍️ Penyesuaian Nama Kepala Divisi (Opsional)", expanded=False):
+    # Ambil nilai override saat ini (jika ada)
+    curr_h_ov = st.session_state.val_overrides.get("H", "")
+    curr_i_ov = st.session_state.val_overrides.get("I", "")
+
+    with st.form("override_hi_form", clear_on_submit=False):
+        # I = "Nama Kepala Divisi"
+        i_override = st.text_input(
+            "Override I (Nama Kepala Divisi)",
+            value=curr_i_ov,
+            placeholder="Nama Kepala Divisi",
+            help="Jika diisi, akan menimpa nilai I saat render PDF. Kosongkan untuk menghapus override."
+        )
+
+        # H = "Jabatan Kepala Divisi"
+        h_override = st.text_input(
+            "Override H (Jabatan Kepala Divisi)",
+            value=curr_h_ov,
+            placeholder="Jabatan Kepala Divisi",
+            help="Jika diisi, akan menimpa nilai H saat render PDF. Kosongkan untuk menghapus override."
+        )
+
+        c1, c2 = st.columns([1, 1])
+        save_hi = c1.form_submit_button("💾 Simpan Override H & I", use_container_width=True)
+        clear_hi = c2.form_submit_button("🗑️ Hapus Override H & I", use_container_width=True)
+
+        if save_hi:
+            # Simpan hanya jika ada isinya; jika kosong, hapus override
+            if i_override.strip():
+                st.session_state.val_overrides["I"] = i_override.strip()
+            else:
+                st.session_state.val_overrides.pop("I", None)
+
+            if h_override.strip():
+                st.session_state.val_overrides["H"] = h_override.strip()
+            else:
+                st.session_state.val_overrides.pop("H", None)
+
+            st.success("Override H & I disimpan.")
+            st.rerun()
+
+        if clear_hi:
+            st.session_state.val_overrides.pop("H", None)
+            st.session_state.val_overrides.pop("I", None)
+            st.info("Override H & I dihapus.")
+            st.rerun()
 
 # (DISembunyikan) Hasil Ekstraksi A–K dan JSON A–Q
 # — permintaanmu: hide menu hasil ekstraksi & JSON, jadi tidak ditampilkan.
