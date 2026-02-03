@@ -730,7 +730,7 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
             if base_a or nik_text:
                 text = f"{base_a}  "
                 if nik_text:
-                    text += f"(  {nik_text})"
+                    text += f"  ({nik_text})"
             else:
                 text = ""  # keduanya kosong: jangan cetak apa-apa
 
