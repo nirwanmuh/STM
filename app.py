@@ -728,9 +728,9 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
             digits = "".join(ch for ch in str(raw_nik) if ch.isdigit())
             nik_text = digits or str(raw_nik).strip()
             if base_a or nik_text:
-                text = f"{base_a}"
+                text = f"{base_a}  "
                 if nik_text:
-                    text += f"({nik_text})"
+                    text += f"(  {nik_text})"
             else:
                 text = ""  # keduanya kosong: jangan cetak apa-apa
 
