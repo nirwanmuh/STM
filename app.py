@@ -536,16 +536,16 @@ def build_pdf_multi_pages(background_pages: List[bytes], items_per_page: List[Li
 # =========================
 # UI
 # =========================
-st.set_page_config(page_title="Trip HTML Parser (A–Q) + PDF Overlay (2 Halaman)", page_icon="🧭", layout="wide")
+st.set_page_config(page_title="STM Generator", page_icon="🧭", layout="wide")
 ensure_states()
 
-st.title("🧭 Trip HTML Parser (A–Q)")
-st.caption("Tempel/unggah HTML → A–K → Reimburse → L–Q → Generate & Download PDF 2 Halaman.")
+st.title("STM Generator")
+st.caption("Web Untuk Generate Formulir SPJ")
 
 with st.expander("Cara pakai (singkat)", expanded=False):
     st.markdown(
-        "- **Langkah 1**: Tempel/unggah HTML, klik **Parse HTML** untuk mengambil A–K.\n"
-        "- **Langkah 2**: Buka **Data Atasan** dan **Reimburse** (expand), isi datanya.\n"
+        "- **Langkah 1**: Paste/Unggah HTML, klik **Parse HTML** \n"
+        "- **Langkah 2**: Buka **Data Atasan** dan **Reimburse** (Opsional), isi datanya.\n"
         "- **Langkah 3**: Klik **Generate PDF (2 Halaman)** lalu **Download**."
     )
 
@@ -584,7 +584,7 @@ if parse_btn:
     st.success("HTML berhasil diparse.")
 
 # ===== Data Atasan (R & S) — collapsible =====
-with st.expander("👤 Data Atasan", expanded=False):
+with st.expander("👤 Data Atasan (Opsional)", expanded=False):
     with st.form("atasan_form", clear_on_submit=False):
         r_input = st.text_input("Nama atasan", value=(st.session_state.parsed_AK.get("R") or ""), placeholder="nama atasan")
         s_input = st.text_input("Jabatan atasan", value=(st.session_state.parsed_AK.get("S") or ""), placeholder="jabatan atasan")
@@ -595,7 +595,7 @@ with st.expander("👤 Data Atasan", expanded=False):
             st.success("Data atasan disimpan (R & S).")
 
 # ===== Reimburse — collapsible =====
-with st.expander("🧾 Reimburse", expanded=False):
+with st.expander("🧾 Reimburse (Opsional)", expanded=False):
     with st.form("reimburse_form", clear_on_submit=True):
         jenis = st.selectbox("Jenis biaya", options=["bensin", "hotel", "toll", "transportasi", "parkir"], index=0)
         nominal_text = st.text_input("Nominal (contoh: 1200000 atau IDR 1.200.000)", value="")
