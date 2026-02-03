@@ -268,6 +268,17 @@ def ensure_states():
             "align": "center", "from_right": True, "max_width": 135.0
         }
 
+        # === NIK di halaman 2 (boleh diatur user lewat UI khusus) ===
+        cs2["NIK2"] = {
+            "x": 167.0, "y": 628.0,  # default diletakkan sedikit di bawah G2
+            "size": 9,
+            "bold": False,
+            "underline": False,
+            "align": "left",
+            "from_right": False,
+            "max_width": 0.0
+        }
+
         st.session_state.coord_style_page2 = cs2
 
     # Lock editor halaman 2 (tidak ditampilkan di UI)
@@ -576,11 +587,14 @@ if parse_btn:
         st.stop()
     old_r = (st.session_state.parsed_AK or {}).get("R")
     old_s = (st.session_state.parsed_AK or {}).get("S")
+    old_nik = (st.session_state.parsed_AK or {}).get("NIK")  # pertahankan NIK
     st.session_state.parsed_AK = parse_html_to_A_to_K(html_text)
     if old_r:
         st.session_state.parsed_AK["R"] = old_r
     if old_s:
         st.session_state.parsed_AK["S"] = old_s
+    if old_nik:
+        st.session_state.parsed_AK["NIK"] = old_nik
     st.success("HTML berhasil diparse.")
 
 # ===== Data Atasan (R & S) — collapsible =====
@@ -593,6 +607,21 @@ with st.expander("👤 Data Atasan (Opsional)", expanded=False):
             st.session_state.parsed_AK["R"] = r_input.strip()
             st.session_state.parsed_AK["S"] = s_input.strip()
             st.success("Data atasan disimpan (R & S).")
+
+# ===== Data Karyawan (NIK) — collapsible =====
+with st.expander("🪪 Data Karyawan (NIK)", expanded=False):
+    with st.form("nik_form", clear_on_submit=False):
+        nik_old = (st.session_state.parsed_AK or {}).get("NIK") or ""
+        nik_input = st.text_input(
+            "NIK",
+            value=nik_old,
+            placeholder="contoh: 3174xxxxxxxxxxxx",
+            help="Angka saja; karakter non-digit akan dibersihkan otomatis saat render."
+        )
+        submit_nik = st.form_submit_button("💾 Simpan NIK", use_container_width=True)
+        if submit_nik:
+            st.session_state.parsed_AK["NIK"] = nik_input.strip()
+            st.success("NIK disimpan.")
 
 # ===== Reimburse — collapsible =====
 with st.expander("🧾 Reimburse (Opsional)", expanded=False):
@@ -670,6 +699,42 @@ if not st.session_state.bg_template2_bytes:
                     st.session_state.bg_template2_bytes = f.read()
     except Exception as e:
         pass
+
+# =========================
+# Pengaturan NIK (style halaman 2) — UI khusus
+# =========================
+with st.expander("🎛️ Pengaturan NIK (Halaman 2)", expanded=False):
+    cs2 = st.session_state.coord_style_page2
+    nik_style = cs2.get("NIK2", {}).copy()
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        nik_x = st.number_input("X", value=float(nik_style.get("x", 167.0)), step=1.0, format="%.1f")
+        nik_y = st.number_input("Y", value=float(nik_style.get("y", 628.0)), step=1.0, format="%.1f")
+        nik_size = st.number_input("Ukuran Font", value=int(nik_style.get("size", 9)), step=1, min_value=6, max_value=24)
+    with col2:
+        nik_bold = st.checkbox("Bold", value=bool(nik_style.get("bold", False)))
+        nik_underline = st.checkbox("Underline", value=bool(nik_style.get("underline", False)))
+    with col3:
+        nik_align = st.selectbox("Align", options=["left", "center", "right"], index=["left", "center", "right"].index(str(nik_style.get("align", "left"))))
+        nik_from_right = st.checkbox("Right-anchored (from_right)", value=bool(nik_style.get("from_right", False)),
+                                     help="Jika dicentang, nilai X dibaca sebagai jarak dari sisi kanan.")
+        nik_max_width = st.number_input("Maks. Lebar (0 = tidak wrap)", value=float(nik_style.get("max_width", 0.0)), step=5.0, format="%.1f",
+                                        help="Isi >0 untuk aktifkan word-wrapping.")
+
+    if st.button("💾 Simpan Style NIK (Halaman 2)", use_container_width=True, key="btn_save_nik2_style"):
+        cs2["NIK2"] = {
+            "x": float(nik_x),
+            "y": float(nik_y),
+            "size": int(nik_size),
+            "bold": bool(nik_bold),
+            "underline": bool(nik_underline),
+            "align": str(nik_align),
+            "from_right": bool(nik_from_right),
+            "max_width": float(nik_max_width),
+        }
+        st.session_state.coord_style_page2 = cs2
+        st.success("Style NIK2 disimpan.")
 
 # =========================
 # Items builders
@@ -761,6 +826,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     - CITY_TODAY = "Jakarta, [tanggal hari ini]"
     - A2_AGAIN = value A
     - G2_AGAIN = value G
+    - NIK2 = value NIK (digits-only prefer), pos & style editable dari UI
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
@@ -791,6 +857,11 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
             text = (get_value_for_key("A") or "").strip()
         elif key == "G2_AGAIN":
             text = (get_value_for_key("G") or "").strip()
+        elif key == "NIK2":
+            # Ambil NIK dari parsed_AK; bersihkan ke digit-only saat render.
+            raw_nik = (st.session_state.parsed_AK or {}).get("NIK", "")
+            digits = "".join(ch for ch in str(raw_nik) if ch.isdigit())
+            text = digits or (str(raw_nik).strip() if str(raw_nik).strip() else "")
         else:
             base_key = key[:-1].upper() if key.endswith("2") else key.upper()
             if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
