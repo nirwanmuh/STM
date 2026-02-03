@@ -254,7 +254,7 @@ def ensure_states():
         cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True, "align": "center", "from_right": False, "max_width": 0.0}
         cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
 
-        # ===== Tambahan custom (disimpan sesuai template yang kamu minta) =====
+        # ===== Tambahan custom =====
         cs2["CITY_TODAY"] = {
             "x": 180.0, "y": 300.0, "size": 9, "bold": False, "underline": False,
             "align": "center", "from_right": True, "max_width": 0.0
@@ -268,9 +268,9 @@ def ensure_states():
             "align": "center", "from_right": True, "max_width": 135.0
         }
 
-        # === NIK di halaman 2 (boleh diatur user lewat UI khusus) ===
+        # === NIK di halaman 2 (disimpan; UI edit disembunyikan) ===
         cs2["NIK2"] = {
-            "x": 167.0, "y": 628.0,  # default diletakkan sedikit di bawah G2
+            "x": 167.0, "y": 628.0,
             "size": 9,
             "bold": False,
             "underline": False,
@@ -281,7 +281,7 @@ def ensure_states():
 
         st.session_state.coord_style_page2 = cs2
 
-    # Lock editor halaman 2 (tidak ditampilkan di UI)
+    # Lock editor halaman 2 (tetap disembunyikan di UI umum)
     st.session_state["lock_page2_coords"] = True  # force hide editor
 
 
@@ -701,42 +701,6 @@ if not st.session_state.bg_template2_bytes:
         pass
 
 # =========================
-# Pengaturan NIK (style halaman 2) — UI khusus
-# =========================
-with st.expander("🎛️ Pengaturan NIK (Halaman 2)", expanded=False):
-    cs2 = st.session_state.coord_style_page2
-    nik_style = cs2.get("NIK2", {}).copy()
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        nik_x = st.number_input("X", value=float(nik_style.get("x", 167.0)), step=1.0, format="%.1f")
-        nik_y = st.number_input("Y", value=float(nik_style.get("y", 628.0)), step=1.0, format="%.1f")
-        nik_size = st.number_input("Ukuran Font", value=int(nik_style.get("size", 9)), step=1, min_value=6, max_value=24)
-    with col2:
-        nik_bold = st.checkbox("Bold", value=bool(nik_style.get("bold", False)))
-        nik_underline = st.checkbox("Underline", value=bool(nik_style.get("underline", False)))
-    with col3:
-        nik_align = st.selectbox("Align", options=["left", "center", "right"], index=["left", "center", "right"].index(str(nik_style.get("align", "left"))))
-        nik_from_right = st.checkbox("Right-anchored (from_right)", value=bool(nik_style.get("from_right", False)),
-                                     help="Jika dicentang, nilai X dibaca sebagai jarak dari sisi kanan.")
-        nik_max_width = st.number_input("Maks. Lebar (0 = tidak wrap)", value=float(nik_style.get("max_width", 0.0)), step=5.0, format="%.1f",
-                                        help="Isi >0 untuk aktifkan word-wrapping.")
-
-    if st.button("💾 Simpan Style NIK (Halaman 2)", use_container_width=True, key="btn_save_nik2_style"):
-        cs2["NIK2"] = {
-            "x": float(nik_x),
-            "y": float(nik_y),
-            "size": int(nik_size),
-            "bold": bool(nik_bold),
-            "underline": bool(nik_underline),
-            "align": str(nik_align),
-            "from_right": bool(nik_from_right),
-            "max_width": float(nik_max_width),
-        }
-        st.session_state.coord_style_page2 = cs2
-        st.success("Style NIK2 disimpan.")
-
-# =========================
 # Items builders
 # =========================
 def _items_page1_from_state() -> List[Dict[str, object]]:
@@ -749,6 +713,7 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
         style = cs[k]
         x, y = style["x"], style["y"]
         size, bold, align, ul = style["size"], style["bold"], style["align"], style["underline"]
+
         if k == "J":
             val = day_diff_inclusive(ak.get("D"), ak.get("E"))
             if val is None or val <= 0:
@@ -756,10 +721,34 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
                 digits = "".join(ch for ch in str(raw or "") if ch.isdigit())
                 val = int(digits) if digits else ""
             text = "-" if (isinstance(val, int) and val == 0) or str(val).strip() == "" else str(val)
+
+        elif k == "A":
+            base_a = (get_value_for_key("A") or "").strip()
+            raw_nik = (st.session_state.parsed_AK or {}).get("NIK", "")
+            digits = "".join(ch for ch in str(raw_nik) if ch.isdigit())
+            nik_text = digits or str(raw_nik).strip()
+            if base_a or nik_text:
+                text = f"value a: {base_a}"
+                if nik_text:
+                    text += f" + ({nik_text})"
+            else:
+                text = ""  # keduanya kosong: jangan cetak apa-apa
+
         else:
             text = get_value_for_key(k)
+
         if str(text).strip():
-            items.append({"key": k, "text": str(text), "x": x, "y": y, "size": size, "bold": bold, "underline": ul, "from_right": False, "align": align})
+            items.append({
+                "key": k,
+                "text": str(text),
+                "x": x,
+                "y": y,
+                "size": size,
+                "bold": bold,
+                "underline": ul,
+                "from_right": False,
+                "align": align
+            })
 
     # 2) F–I
     for k in ["F", "G", "H", "I"]:
@@ -826,7 +815,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     - CITY_TODAY = "Jakarta, [tanggal hari ini]"
     - A2_AGAIN = value A
     - G2_AGAIN = value G
-    - NIK2 = value NIK (digits-only prefer), pos & style editable dari UI
+    - NIK2 = value NIK (digits-only prefer), pos & style telah disimpan
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
@@ -920,3 +909,4 @@ if st.session_state.get("preview_pdf"):
         use_container_width=True,
         key="dl_pdf_single"
     )
+``
