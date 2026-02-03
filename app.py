@@ -680,7 +680,7 @@ with st.expander("✍️ Penyesuaian Nama Kepala Divisi (Opsional)", expanded=Fa
     with st.form("override_hi_form", clear_on_submit=False):
         # I = "Nama Kepala Divisi"
         i_override = st.text_input(
-            "Override I (Nama Kepala Divisi)",
+            "Nama Kepala Divisi",
             value=curr_i_ov,
             placeholder="Nama Kepala Divisi",
             help="Jika diisi, akan menimpa nilai I saat render PDF. Kosongkan untuk menghapus override."
@@ -688,15 +688,15 @@ with st.expander("✍️ Penyesuaian Nama Kepala Divisi (Opsional)", expanded=Fa
 
         # H = "Jabatan Kepala Divisi"
         h_override = st.text_input(
-            "Override H (Jabatan Kepala Divisi)",
+            "Jabatan Kepala Divisi",
             value=curr_h_ov,
             placeholder="Jabatan Kepala Divisi",
             help="Jika diisi, akan menimpa nilai H saat render PDF. Kosongkan untuk menghapus override."
         )
 
         c1, c2 = st.columns([1, 1])
-        save_hi = c1.form_submit_button("💾 Simpan Override H & I", use_container_width=True)
-        clear_hi = c2.form_submit_button("🗑️ Hapus Override H & I", use_container_width=True)
+        save_hi = c1.form_submit_button("💾 Simpan", use_container_width=True)
+        clear_hi = c2.form_submit_button("🗑️ Hapus", use_container_width=True)
 
         if save_hi:
             # Simpan hanya jika ada isinya; jika kosong, hapus override
