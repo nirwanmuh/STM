@@ -673,16 +673,16 @@ with st.expander("🧾 Reimburse (Opsional)", expanded=False):
     tcols[5].metric("**Q – Total Semua**", fmt_idr(totals["Q"]))
 
 # ===== Data Atasan (R & S) — collapsible =====
-with st.expander("👤 Data Atasan (Opsional)", expanded=False):
+with st.expander("👤 Data Manager (Opsional)", expanded=False):
     # Checklist kemunculan R & S per halaman
     c1, c2 = st.columns(2)
     show_rs_p1 = c1.checkbox(
-        "Tampilkan R & S di **Halaman 1**",
+        "**Halaman 1**",
         value=st.session_state.get("SHOW_RS_PAGE1", True),
         help="Centang agar Nama & Jabatan Atasan muncul di Halaman 1."
     )
     show_rs_p2 = c2.checkbox(
-        "Tampilkan R & S di **Halaman 2**",
+        "**Halaman 2**",
         value=st.session_state.get("SHOW_RS_PAGE2", False),
         help="Centang agar Nama & Jabatan Atasan muncul di Halaman 2."
     )
@@ -696,7 +696,7 @@ with st.expander("👤 Data Atasan (Opsional)", expanded=False):
     with st.form("atasan_form", clear_on_submit=False):
         r_input = st.text_input("Nama atasan", value=(st.session_state.parsed_AK.get("R") or ""), placeholder="nama atasan")
         s_input = st.text_input("Jabatan atasan", value=(st.session_state.parsed_AK.get("S") or ""), placeholder="jabatan atasan")
-        submit_rs = st.form_submit_button("💾 Simpan Atasan", use_container_width=True)
+        submit_rs = st.form_submit_button("💾 Simpan Data", use_container_width=True)
         if submit_rs:
             st.session_state.parsed_AK["R"] = r_input.strip()
             st.session_state.parsed_AK["S"] = s_input.strip()
