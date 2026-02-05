@@ -13,9 +13,6 @@ from src.parser import parse_html_to_A_to_K
 # =========================
 # Konfigurasi UI (dev toggle)
 # =========================
-# Secara default, sembunyikan menu overlay PDF, status template, dan pengaturan koordinat.
-# Jika perlu debug/develop, set env: SHOW_OVERLAY_UI=1 atau di runtime:
-# st.session_state["SHOW_OVERLAY_UI"] = True
 SHOW_OVERLAY_UI_DEFAULT = False
 SHOW_OVERLAY_UI = bool(int(os.getenv("SHOW_OVERLAY_UI", "1" if SHOW_OVERLAY_UI_DEFAULT else "0")))
 SHOW_OVERLAY_UI = st.session_state.get("SHOW_OVERLAY_UI", SHOW_OVERLAY_UI)
@@ -67,11 +64,10 @@ def day_diff_inclusive(D: Optional[str], E: Optional[str]) -> Optional[int]:
 def today_id_str(prefix_city: str = "Jakarta") -> str:
     """
     "Jakarta, 2 Februari 2026" — format tanggal Indonesia dengan zona Asia/Jakarta jika tersedia.
-    Menggunakan zoneinfo (Python 3.9+). Jika tidak ada, fallback ke datetime.now() lokal.
     """
     from datetime import datetime
     try:
-        from zoneinfo import ZoneInfo  # Python 3.9+
+        from zoneinfo import ZoneInfo
         now = datetime.now(ZoneInfo("Asia/Jakarta"))
     except Exception:
         now = datetime.now()
@@ -147,15 +143,9 @@ def terbilang_id(n: int) -> str:
             if skala == 1000 and hitung == 1:
                 bagian.append("seribu")
             else:
-                if hitung < 1000:
-                    kata = _terbilang_lt_1000(hitung)
-                else:
-                    kata = terbilang_id(hitung)
+                kata = _terbilang_lt_1000(hitung) if hitung < 1000 else terbilang_id(hitung)
                 if kata:
-                    if nama:
-                        bagian.append(f"{kata} {nama}")
-                    else:
-                        bagian.append(kata)
+                    bagian.append(f"{kata} {nama}" if nama else kata)
     return " ".join(bagian).strip()
 
 
@@ -185,11 +175,11 @@ def ensure_states():
     if "val_overrides" not in st.session_state:
         st.session_state.val_overrides: Dict[str, str] = {}
 
-    # === NEW: kontrol tampil R & S per halaman ===
+    # Kontrol tampil R & S per halaman
     if "SHOW_RS_PAGE1" not in st.session_state:
-        st.session_state.SHOW_RS_PAGE1 = True   # default ON di Halaman 1
+        st.session_state.SHOW_RS_PAGE1 = True   # default ON Halaman 1
     if "SHOW_RS_PAGE2" not in st.session_state:
-        st.session_state.SHOW_RS_PAGE2 = False  # default OFF di Halaman 2
+        st.session_state.SHOW_RS_PAGE2 = False  # default OFF Halaman 2
 
     # Koordinat HALAMAN 1 (fixed)
     if "coord_style" not in st.session_state:
@@ -227,7 +217,7 @@ def ensure_states():
             "Q_DUP": {"key": "Q", "x": 260.0, "y": 183.0, "size": 9, "bold": True, "underline": False, "from_right": True, "align": "right"},
         }
 
-    # Koordinat HALAMAN 2 — EDITABLE (A2..Q2 + Q2_TB + DESC2 + R2 + S2 + CUSTOM)
+    # Koordinat HALAMAN 2 — (disimpan; editor disembunyikan)
     if "coord_style_page2" not in st.session_state:
         cs2 = {}
 
@@ -248,19 +238,35 @@ def ensure_states():
         cs2["P2"] = _right_num(118, 445)
         cs2["Q2"] = _right_num(118, 420)  # Q2 = angka (Q+K)
 
-        # Q2_TB = terbilang (Q+K) — default x133,y407, max_width 350
+        # Q2_TB = terbilang (Q+K)
         cs2["Q2_TB"] = {"x": 133.0, "y": 407.0, "size": 9, "bold": False, "underline": False,
                         "align": "left", "from_right": False, "max_width": 350.0}
 
-        # DESC2 = kalimat keterangan C/D/E/F — SET agar langsung tercetak
+        # DESC2 = kalimat keterangan C/D/E/F
         cs2["DESC2"] = {"x": 82.0, "y": 370.0, "size": 9, "bold": False, "underline": False,
                         "align": "left", "from_right": False, "max_width": 420.0}
 
-        # R2 / S2 (opsional) — default disembunyikan (0,0), diatur via UI
-        cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True, "align": "center", "from_right": False, "max_width": 0.0}
-        cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
+        # ====== R2 / S2 (DISIMPAN DARI INPUTMU & TIDAK DIEDIT LAGI) ======
+        cs2["R2"] = {
+            "x": 180.0, "y": 225.0,
+            "size": 9,
+            "bold": True,
+            "underline": False,
+            "align": "center",
+            "from_right": True,
+            "max_width": 0.0
+        }
+        cs2["S2"] = {
+            "x": 180.0, "y": 212.0,
+            "size": 9,
+            "bold": False,
+            "underline": False,
+            "align": "center",
+            "from_right": True,
+            "max_width": 135.0
+        }
 
-        # ===== Tambahan custom =====
+        # Tambahan custom
         cs2["CITY_TODAY"] = {
             "x": 180.0, "y": 300.0, "size": 9, "bold": False, "underline": False,
             "align": "center", "from_right": True, "max_width": 0.0
@@ -274,7 +280,7 @@ def ensure_states():
             "align": "center", "from_right": True, "max_width": 135.0
         }
 
-        # === NIK di halaman 2 (disimpan; UI edit disembunyikan) ===
+        # NIK di halaman 2
         cs2["NIK2"] = {
             "x": 167.0, "y": 628.0,
             "size": 9,
@@ -287,8 +293,8 @@ def ensure_states():
 
         st.session_state.coord_style_page2 = cs2
 
-    # Lock editor halaman 2 (tetap disembunyikan di UI umum)
-    st.session_state["lock_page2_coords"] = True  # force hide editor
+    # Lock editor halaman 2 (force hide editor — untuk berjaga-jaga)
+    st.session_state["lock_page2_coords"] = True
 
 
 def recompute_totals():
@@ -668,7 +674,7 @@ with st.expander("🧾 Reimburse (Opsional)", expanded=False):
 
 # ===== Data Atasan (R & S) — collapsible =====
 with st.expander("👤 Data Atasan (Opsional)", expanded=False):
-    # === NEW: Checklist kemunculan R & S per halaman ===
+    # Checklist kemunculan R & S per halaman
     c1, c2 = st.columns(2)
     show_rs_p1 = c1.checkbox(
         "Tampilkan R & S di **Halaman 1**",
@@ -680,13 +686,13 @@ with st.expander("👤 Data Atasan (Opsional)", expanded=False):
         value=st.session_state.get("SHOW_RS_PAGE2", False),
         help="Centang agar Nama & Jabatan Atasan muncul di Halaman 2."
     )
-    # Simpan ke state (langsung)
+    # Simpan ke state
     st.session_state.SHOW_RS_PAGE1 = bool(show_rs_p1)
     st.session_state.SHOW_RS_PAGE2 = bool(show_rs_p2)
 
     st.markdown("---")
 
-    # === Form input nilai R & S ===
+    # Form input nilai R & S
     with st.form("atasan_form", clear_on_submit=False):
         r_input = st.text_input("Nama atasan", value=(st.session_state.parsed_AK.get("R") or ""), placeholder="nama atasan")
         s_input = st.text_input("Jabatan atasan", value=(st.session_state.parsed_AK.get("S") or ""), placeholder="jabatan atasan")
@@ -696,69 +702,11 @@ with st.expander("👤 Data Atasan (Opsional)", expanded=False):
             st.session_state.parsed_AK["S"] = s_input.strip()
             st.success("Data atasan disimpan (R & S).")
 
-# ===== NEW: Pengaturan koordinat & style R/S di Halaman 2 =====
-with st.expander("🎯 Posisi & Style R/S di Halaman 2", expanded=False):
-    st.caption("Atur posisi & style untuk nilai **R** (Nama Atasan) dan **S** (Jabatan Atasan) yang muncul di **Halaman 2**.")
-    cs2 = st.session_state.get("coord_style_page2", {})
+# (Editor koordinat/style Halaman 2 untuk R/S DISENGAJA DIHILANGKAN dari UI)
 
-    def _edit_style_row(label: str, key: str):
-        style = dict(cs2.get(key, {}))
-        c1, c2, c3 = st.columns([1, 1, 1])
-        x = c1.number_input(f"{label} — X", value=float(style.get("x", 0.0)), step=1.0)
-        y = c2.number_input(f"{label} — Y", value=float(style.get("y", 0.0)), step=1.0)
-        size = c3.number_input(f"{label} — Size", value=int(style.get("size", 9)), min_value=6, max_value=24, step=1)
-
-        c4, c5, c6 = st.columns([1, 1, 1])
-        align = c4.selectbox(f"{label} — Align", options=["left", "center", "right"], index=["left","center","right"].index(str(style.get("align","left")).lower()))
-        bold = c5.checkbox(f"{label} — Bold", value=bool(style.get("bold", False)))
-        underline = c6.checkbox(f"{label} — Underline", value=bool(style.get("underline", False)))
-
-        c7, c8 = st.columns([1, 1])
-        from_right = c7.checkbox(f"{label} — From right", value=bool(style.get("from_right", False)), help="Jika dicentang, nilai X dihitung dari sisi kanan.")
-        max_width = c8.number_input(f"{label} — Max width (opsional)", value=float(style.get("max_width", 0.0)), step=5.0, help="0 berarti tidak dibungkus per baris.")
-
-        return {
-            "x": float(x),
-            "y": float(y),
-            "size": int(size),
-            "bold": bool(bold),
-            "underline": bool(underline),
-            "align": str(align),
-            "from_right": bool(from_right),
-            "max_width": float(max_width),
-        }
-
-    with st.form("rs_page2_style", clear_on_submit=False):
-        st.markdown("**R2 — Nama Atasan (Halaman 2)**")
-        new_r2 = _edit_style_row("R2", "R2")
-
-        st.markdown("---")
-        st.markdown("**S2 — Jabatan Atasan (Halaman 2)**")
-        new_s2 = _edit_style_row("S2", "S2")
-
-        csave, cclear = st.columns([1,1])
-        save_style = csave.form_submit_button("💾 Simpan Style R2 & S2", use_container_width=True)
-        clear_style = cclear.form_submit_button("🗑️ Reset ke Default (0,0)", use_container_width=True)
-
-        if save_style:
-            cs2["R2"] = new_r2
-            cs2["S2"] = new_s2
-            st.session_state.coord_style_page2 = cs2
-            st.success("Style R2 & S2 Halaman 2 disimpan.")
-            st.rerun()
-
-        if clear_style:
-            cs2["R2"]["x"], cs2["R2"]["y"] = 0.0, 0.0
-            cs2["S2"]["x"], cs2["S2"]["y"] = 0.0, 0.0
-            st.session_state.coord_style_page2 = cs2
-            st.info("Posisi R2 & S2 direset ke (0,0).")
-            st.rerun()
-
-# (DISembunyikan) Hasil Ekstraksi A–K dan JSON A–Q
-# — permintaanmu: hide menu hasil ekstraksi & JSON, jadi tidak ditampilkan.
 
 # =========================
-# Template PDF (auto-load, UI overlay disembunyikan)
+# Template PDF (auto-load)
 # =========================
 DEFAULT_BG_PATH = os.environ.get("SPJ_BG_PATH", "assets/spj_blank.pdf")
 if not st.session_state.bg_template_bytes:
@@ -766,7 +714,7 @@ if not st.session_state.bg_template_bytes:
         if os.path.exists(DEFAULT_BG_PATH):
             with open(DEFAULT_BG_PATH, "rb") as f:
                 st.session_state.bg_template_bytes = f.read()
-    except Exception as e:
+    except Exception:
         pass
 
 DEFAULT_BG2_PATH = os.environ.get("SPJ_BG2_PATH", "assets/spj_blank2.pdf")
@@ -780,8 +728,9 @@ if not st.session_state.bg_template2_bytes:
             if os.path.exists(fallback):
                 with open(fallback, "rb") as f:
                     st.session_state.bg_template2_bytes = f.read()
-    except Exception as e:
+    except Exception:
         pass
+
 
 # =========================
 # Items builders
@@ -847,7 +796,7 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
                 item["max_width"] = float(style.get("max_width", 135.0))
             items.append(item)
 
-    # 2b) R & S (hormati checklist Halaman 1) — NEW
+    # 2b) R & S (hormati checklist Halaman 1)
     if st.session_state.get("SHOW_RS_PAGE1", True):
         r_style = cs["R"]; r_txt = (ak.get("R") or "").strip()
         if r_txt:
@@ -923,7 +872,7 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
         if x == 0.0 and y == 0.0:
             continue
 
-        # NEW: Hanya tampilkan R2 & S2 jika checklist Halaman 2 dicentang
+        # Hanya tampilkan R2 & S2 jika checklist Halaman 2 dicentang
         if key in ("R2", "S2") and not st.session_state.get("SHOW_RS_PAGE2", False):
             continue
 
@@ -949,7 +898,6 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
         elif key == "G2_AGAIN":
             text = (get_value_for_key("G") or "").strip()
         elif key == "NIK2":
-            # Ambil NIK dari parsed_AK; bersihkan ke digit-only saat render.
             raw_nik = (st.session_state.parsed_AK or {}).get("NIK", "")
             digits = "".join(ch for ch in str(raw_nik) if ch.isdigit())
             text = digits or (str(raw_nik).strip() if str(raw_nik).strip() else "")
