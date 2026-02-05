@@ -185,6 +185,12 @@ def ensure_states():
     if "val_overrides" not in st.session_state:
         st.session_state.val_overrides: Dict[str, str] = {}
 
+    # === NEW: kontrol tampil R & S per halaman ===
+    if "SHOW_RS_PAGE1" not in st.session_state:
+        st.session_state.SHOW_RS_PAGE1 = True   # default ON di Halaman 1
+    if "SHOW_RS_PAGE2" not in st.session_state:
+        st.session_state.SHOW_RS_PAGE2 = False  # default OFF di Halaman 2
+
     # Koordinat HALAMAN 1 (fixed)
     if "coord_style" not in st.session_state:
         st.session_state.coord_style = {
@@ -250,7 +256,7 @@ def ensure_states():
         cs2["DESC2"] = {"x": 82.0, "y": 370.0, "size": 9, "bold": False, "underline": False,
                         "align": "left", "from_right": False, "max_width": 420.0}
 
-        # R2 / S2 (opsional)
+        # R2 / S2 (opsional) — default disembunyikan (0,0), diatur via UI
         cs2["R2"] = {"x": 0.0, "y": 0.0, "size": 8, "bold": True, "underline": True, "align": "center", "from_right": False, "max_width": 0.0}
         cs2["S2"] = {"x": 0.0, "y": 0.0, "size": 7, "bold": False, "underline": False, "align": "center", "from_right": False, "max_width": 135.0}
 
@@ -662,6 +668,25 @@ with st.expander("🧾 Reimburse (Opsional)", expanded=False):
 
 # ===== Data Atasan (R & S) — collapsible =====
 with st.expander("👤 Data Atasan (Opsional)", expanded=False):
+    # === NEW: Checklist kemunculan R & S per halaman ===
+    c1, c2 = st.columns(2)
+    show_rs_p1 = c1.checkbox(
+        "Tampilkan R & S di **Halaman 1**",
+        value=st.session_state.get("SHOW_RS_PAGE1", True),
+        help="Centang agar Nama & Jabatan Atasan muncul di Halaman 1."
+    )
+    show_rs_p2 = c2.checkbox(
+        "Tampilkan R & S di **Halaman 2**",
+        value=st.session_state.get("SHOW_RS_PAGE2", False),
+        help="Centang agar Nama & Jabatan Atasan muncul di Halaman 2."
+    )
+    # Simpan ke state (langsung)
+    st.session_state.SHOW_RS_PAGE1 = bool(show_rs_p1)
+    st.session_state.SHOW_RS_PAGE2 = bool(show_rs_p2)
+
+    st.markdown("---")
+
+    # === Form input nilai R & S ===
     with st.form("atasan_form", clear_on_submit=False):
         r_input = st.text_input("Nama atasan", value=(st.session_state.parsed_AK.get("R") or ""), placeholder="nama atasan")
         s_input = st.text_input("Jabatan atasan", value=(st.session_state.parsed_AK.get("S") or ""), placeholder="jabatan atasan")
@@ -671,52 +696,62 @@ with st.expander("👤 Data Atasan (Opsional)", expanded=False):
             st.session_state.parsed_AK["S"] = s_input.strip()
             st.success("Data atasan disimpan (R & S).")
 
-# ===== Override Nilai H & I — collapsible =====
-with st.expander("✍️ Penyesuaian Nama Kepala Divisi (Opsional)", expanded=False):
-    # Ambil nilai override saat ini (jika ada)
-    curr_h_ov = st.session_state.val_overrides.get("H", "")
-    curr_i_ov = st.session_state.val_overrides.get("I", "")
+# ===== NEW: Pengaturan koordinat & style R/S di Halaman 2 =====
+with st.expander("🎯 Posisi & Style R/S di Halaman 2", expanded=False):
+    st.caption("Atur posisi & style untuk nilai **R** (Nama Atasan) dan **S** (Jabatan Atasan) yang muncul di **Halaman 2**.")
+    cs2 = st.session_state.get("coord_style_page2", {})
 
-    with st.form("override_hi_form", clear_on_submit=False):
-        # I = "Nama Kepala Divisi"
-        i_override = st.text_input(
-            "Nama Kepala Divisi",
-            value=curr_i_ov,
-            placeholder="Nama Kepala Divisi",
-            help="Jika diisi, akan menimpa nilai I saat render PDF. Kosongkan untuk menghapus override."
-        )
+    def _edit_style_row(label: str, key: str):
+        style = dict(cs2.get(key, {}))
+        c1, c2, c3 = st.columns([1, 1, 1])
+        x = c1.number_input(f"{label} — X", value=float(style.get("x", 0.0)), step=1.0)
+        y = c2.number_input(f"{label} — Y", value=float(style.get("y", 0.0)), step=1.0)
+        size = c3.number_input(f"{label} — Size", value=int(style.get("size", 9)), min_value=6, max_value=24, step=1)
 
-        # H = "Jabatan Kepala Divisi"
-        h_override = st.text_input(
-            "Jabatan Kepala Divisi",
-            value=curr_h_ov,
-            placeholder="Jabatan Kepala Divisi",
-            help="Jika diisi, akan menimpa nilai H saat render PDF. Kosongkan untuk menghapus override."
-        )
+        c4, c5, c6 = st.columns([1, 1, 1])
+        align = c4.selectbox(f"{label} — Align", options=["left", "center", "right"], index=["left","center","right"].index(str(style.get("align","left")).lower()))
+        bold = c5.checkbox(f"{label} — Bold", value=bool(style.get("bold", False)))
+        underline = c6.checkbox(f"{label} — Underline", value=bool(style.get("underline", False)))
 
-        c1, c2 = st.columns([1, 1])
-        save_hi = c1.form_submit_button("💾 Simpan", use_container_width=True)
-        clear_hi = c2.form_submit_button("🗑️ Hapus", use_container_width=True)
+        c7, c8 = st.columns([1, 1])
+        from_right = c7.checkbox(f"{label} — From right", value=bool(style.get("from_right", False)), help="Jika dicentang, nilai X dihitung dari sisi kanan.")
+        max_width = c8.number_input(f"{label} — Max width (opsional)", value=float(style.get("max_width", 0.0)), step=5.0, help="0 berarti tidak dibungkus per baris.")
 
-        if save_hi:
-            # Simpan hanya jika ada isinya; jika kosong, hapus override
-            if i_override.strip():
-                st.session_state.val_overrides["I"] = i_override.strip()
-            else:
-                st.session_state.val_overrides.pop("I", None)
+        return {
+            "x": float(x),
+            "y": float(y),
+            "size": int(size),
+            "bold": bool(bold),
+            "underline": bool(underline),
+            "align": str(align),
+            "from_right": bool(from_right),
+            "max_width": float(max_width),
+        }
 
-            if h_override.strip():
-                st.session_state.val_overrides["H"] = h_override.strip()
-            else:
-                st.session_state.val_overrides.pop("H", None)
+    with st.form("rs_page2_style", clear_on_submit=False):
+        st.markdown("**R2 — Nama Atasan (Halaman 2)**")
+        new_r2 = _edit_style_row("R2", "R2")
 
-            st.success("Override H & I disimpan.")
+        st.markdown("---")
+        st.markdown("**S2 — Jabatan Atasan (Halaman 2)**")
+        new_s2 = _edit_style_row("S2", "S2")
+
+        csave, cclear = st.columns([1,1])
+        save_style = csave.form_submit_button("💾 Simpan Style R2 & S2", use_container_width=True)
+        clear_style = cclear.form_submit_button("🗑️ Reset ke Default (0,0)", use_container_width=True)
+
+        if save_style:
+            cs2["R2"] = new_r2
+            cs2["S2"] = new_s2
+            st.session_state.coord_style_page2 = cs2
+            st.success("Style R2 & S2 Halaman 2 disimpan.")
             st.rerun()
 
-        if clear_hi:
-            st.session_state.val_overrides.pop("H", None)
-            st.session_state.val_overrides.pop("I", None)
-            st.info("Override H & I dihapus.")
+        if clear_style:
+            cs2["R2"]["x"], cs2["R2"]["y"] = 0.0, 0.0
+            cs2["S2"]["x"], cs2["S2"]["y"] = 0.0, 0.0
+            st.session_state.coord_style_page2 = cs2
+            st.info("Posisi R2 & S2 direset ke (0,0).")
             st.rerun()
 
 # (DISembunyikan) Hasil Ekstraksi A–K dan JSON A–Q
@@ -812,13 +847,27 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
                 item["max_width"] = float(style.get("max_width", 135.0))
             items.append(item)
 
-    # 2b) R & S
-    r_style = cs["R"]; r_txt = (ak.get("R") or "").strip()
-    if r_txt:
-        items.append({"key": "R", "text": r_txt, "x": r_style["x"], "y": r_style["y"], "size": r_style["size"], "bold": r_style["bold"], "underline": r_style["underline"], "from_right": r_style["from_right"], "align": r_style["align"]})
-    s_style = cs["S"]; s_txt = (ak.get("S") or "").strip()
-    if s_txt:
-        items.append({"key": "S", "text": s_txt, "x": s_style["x"], "y": s_style["y"], "size": s_style["size"], "bold": s_style["bold"], "underline": s_style["underline"], "from_right": s_style["from_right"], "align": s_style["align"], "max_width": float(s_style.get("max_width", 135.0))})
+    # 2b) R & S (hormati checklist Halaman 1) — NEW
+    if st.session_state.get("SHOW_RS_PAGE1", True):
+        r_style = cs["R"]; r_txt = (ak.get("R") or "").strip()
+        if r_txt:
+            items.append({
+                "key": "R", "text": r_txt,
+                "x": r_style["x"], "y": r_style["y"],
+                "size": r_style["size"], "bold": r_style["bold"],
+                "underline": r_style["underline"],
+                "from_right": r_style["from_right"], "align": r_style["align"]
+            })
+        s_style = cs["S"]; s_txt = (ak.get("S") or "").strip()
+        if s_txt:
+            items.append({
+                "key": "S", "text": s_txt,
+                "x": s_style["x"], "y": s_style["y"],
+                "size": s_style["size"], "bold": s_style["bold"],
+                "underline": s_style["underline"],
+                "from_right": s_style["from_right"], "align": s_style["align"],
+                "max_width": float(s_style.get("max_width", 135.0))
+            })
 
     # 3) K–Q kanan
     for k in ["K", "L", "M", "N", "O", "P", "Q"]:
@@ -838,7 +887,7 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
 
     jr = extras["J_RIGHT"]; raw_j = (st.session_state.parsed_AK or {}).get("J")
     j_digits = "".join(ch for ch in str(raw_j or "") if ch.isdigit())
-    j_text = "-" if (j_digits == "" or int(j_digits) == 0) else j_digits
+    j_text = "-" if (j_digits == "" or (j_digits.isdigit() and int(j_digits) == 0)) else j_digits
     if j_text:
         items.append({"key": jr["key"], "text": j_text, "x": jr["x"], "y": jr["y"], "size": jr["size"], "bold": jr["bold"], "underline": jr["underline"], "from_right": jr["from_right"], "align": jr["align"]})
 
@@ -863,7 +912,8 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     - CITY_TODAY = "Jakarta, [tanggal hari ini]"
     - A2_AGAIN = value A
     - G2_AGAIN = value G
-    - NIK2 = value NIK (digits-only prefer), pos & style telah disimpan
+    - NIK2 = value NIK (digits-only prefer)
+    - R2/S2 = value R & S, hanya jika checklist Halaman 2 dicentang
     """
     items: List[Dict[str, object]] = []
     cs2 = st.session_state.coord_style_page2
@@ -871,6 +921,10 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
     for key, style in cs2.items():
         x = float(style["x"]); y = float(style["y"])
         if x == 0.0 and y == 0.0:
+            continue
+
+        # NEW: Hanya tampilkan R2 & S2 jika checklist Halaman 2 dicentang
+        if key in ("R2", "S2") and not st.session_state.get("SHOW_RS_PAGE2", False):
             continue
 
         if key == "Q2":
