@@ -574,7 +574,7 @@ with st.expander("Cara pakai (singkat)", expanded=False):
         "- **Langkah 5**: Paste/Unggah HTML, klik **Parse HTML** \n"
         "- **Langkah 6**: Isi Nomor Induk Karyawan, klik **Simpan NIK** \n"
         "- **Langkah 7**: Buka dan Isi Data **Reimburse** dan **Data Manager** (Opsional).\n"
-        "- **Langkah 8**: Buka dan Isi **Data VP** (Apabila Nama dan Jabatan VP Salah)."
+        "- **Langkah 8**: Buka dan Isi **Data VP** (Apabila Nama dan Jabatan VP Salah).\n"
         "- **Langkah 9**: Klik **Generate PDF** lalu **Download**."
     )
 
