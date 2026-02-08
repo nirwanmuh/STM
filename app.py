@@ -610,13 +610,13 @@ if parse_btn:
     st.success("HTML berhasil diparse.")
 
 # ===== Data Karyawan (NIK) — collapsible =====
-with st.expander("🪪 Data Karyawan (NIK)", expanded=False):
+with st.expander("🪪 Nomor Induk Karyawan (Required)", expanded=False):
     with st.form("nik_form", clear_on_submit=False):
         nik_old = (st.session_state.parsed_AK or {}).get("NIK") or ""
         nik_input = st.text_input(
             "NIK",
             value=nik_old,
-            placeholder="contoh: 3174xxxxxxxxxxxx",
+            placeholder="contoh: 108*******/KKP_***",
             help="Angka saja; karakter non-digit akan dibersihkan otomatis saat render."
         )
         submit_nik = st.form_submit_button("💾 Simpan NIK", use_container_width=True)
