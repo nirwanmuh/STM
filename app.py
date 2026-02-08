@@ -567,9 +567,15 @@ st.caption("Web Untuk Generate Formulir SPJ")
 
 with st.expander("Cara pakai (singkat)", expanded=False):
     st.markdown(
-        "- **Langkah 1**: Paste/Unggah HTML, klik **Parse HTML** \n"
-        "- **Langkah 2**: Buka **Data Atasan** dan **Reimburse** (Opsional), isi datanya.\n"
-        "- **Langkah 3**: Klik **Generate PDF** lalu **Download**."
+        "- **Langkah 1**: Buka https://stm.asdp.id/Trip/Inprogress \n"
+        "- **Langkah 2**: Pilih Data Perjalanan Dinasmu.\n"
+        "- **Langkah 3**: Klik Kanan Lalu Pilih Inspect.\n"
+        "- **Langkah 4**: Copy Semua HTML Halaman Tersebut.\n"        
+        "- **Langkah 5**: Paste/Unggah HTML, klik **Parse HTML** \n"
+        "- **Langkah 6**: Isi Nomor Induk Karyawan, klik **Simpan NIK** \n"
+        "- **Langkah 7**: Buka dan Isi Data **Reimburse** dan **Data Manager** (Opsional).\n"
+        "- **Langkah 8**: Buka dan Isi **Data VP** (Apabila Nama dan Jabatan VP Salah)."
+        "- **Langkah 9**: Klik **Generate PDF** lalu **Download**."
     )
 
 # ===== Input HTML =====
