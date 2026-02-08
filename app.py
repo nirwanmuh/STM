@@ -720,7 +720,7 @@ with st.expander("✏️ Override Data VP (Opsional)", expanded=False):
         h_input = st.text_input(
             "Jabatan VP",
             value=str(current_h),
-            placeholder="contoh: Jabatan VP",
+            placeholder="contoh: Vice President .....",
             help="Isi untuk menimpa nilai H hasil parsing. Kosongkan untuk memakai nilai dari HTML."
         )
 
