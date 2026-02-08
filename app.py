@@ -665,12 +665,12 @@ with st.expander("🧾 Reimburse (Opsional)", expanded=False):
     totals = st.session_state.totals_LQ
     st.markdown("### Total per Jenis (tersimpan ke value **L–Q**)")
     tcols = st.columns(6)
-    tcols[0].metric("**L – Bensin**", fmt_idr(totals["L"]))
-    tcols[1].metric("**M – Hotel**", fmt_idr(totals["M"]))
-    tcols[2].metric("**N – Toll**", fmt_idr(totals["N"]))
-    tcols[3].metric("**O – Transportasi**", fmt_idr(totals["O"]))
-    tcols[4].metric("**P – Parkir**", fmt_idr(totals["P"]))
-    tcols[5].metric("**Q – Total Semua**", fmt_idr(totals["Q"]))
+    tcols[0].metric("**Bensin**", fmt_idr(totals["L"]))
+    tcols[1].metric("**Hotel**", fmt_idr(totals["M"]))
+    tcols[2].metric("**Toll**", fmt_idr(totals["N"]))
+    tcols[3].metric("**Transportasi**", fmt_idr(totals["O"]))
+    tcols[4].metric("**Parkir**", fmt_idr(totals["P"]))
+    tcols[5].metric("**Total Semua**", fmt_idr(totals["Q"]))
 
 # ===== Data Atasan (R & S) — collapsible =====
 with st.expander("👤 Data Manager (Opsional)", expanded=False):
