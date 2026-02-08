@@ -704,6 +704,54 @@ with st.expander("👤 Data Manager (Opsional)", expanded=False):
 
 # (Editor koordinat/style Halaman 2 untuk R/S DISENGAJA DIHILANGKAN dari UI)
 
+# ===== Override H & I — collapsible =====
+with st.expander("✏️ Override Kolom H & I (Opsional)", expanded=False):
+    # Ambil nilai saat ini: prioritas dari override, fallback ke parsed_AK
+    current_h = st.session_state.val_overrides.get("H", (st.session_state.parsed_AK or {}).get("H", ""))
+    current_i = st.session_state.val_overrides.get("I", (st.session_state.parsed_AK or {}).get("I", ""))
+
+    with st.form("override_hi_form", clear_on_submit=False):
+        h_input = st.text_input(
+            "H — (judul bar kiri bawah, default center, max width 135px)",
+            value=str(current_h),
+            placeholder="contoh: TANGGAL BERANGKAT",
+            help="Isi untuk menimpa nilai H hasil parsing. Kosongkan untuk memakai nilai dari HTML."
+        )
+        i_input = st.text_input(
+            "I — (judul bar kiri bawah, bold+underline, default center)",
+            value=str(current_i),
+            placeholder="contoh: NAMA KARYAWAN",
+            help="Isi untuk menimpa nilai I hasil parsing. Kosongkan untuk memakai nilai dari HTML."
+        )
+
+        c1, c2 = st.columns(2)
+        save_override = c1.form_submit_button("💾 Simpan Override", use_container_width=True)
+        clear_override = c2.form_submit_button("🧹 Hapus Override", use_container_width=True)
+
+        if save_override:
+            # Simpan ke val_overrides; "" kita artikan sebagai 'hapus override' agar fallback ke parsed_AK
+            if h_input is not None:
+                if h_input.strip() == "":
+                    st.session_state.val_overrides.pop("H", None)
+                else:
+                    st.session_state.val_overrides["H"] = h_input.strip()
+
+            if i_input is not None:
+                if i_input.strip() == "":
+                    st.session_state.val_overrides.pop("I", None)
+                else:
+                    st.session_state.val_overrides["I"] = i_input.strip()
+
+            st.success("Override H & I disimpan.")
+
+        if clear_override:
+            st.session_state.val_overrides.pop("H", None)
+            st.session_state.val_overrides.pop("I", None)
+            st.success("Override H & I dihapus (kembali memakai nilai dari HTML).")
+
+    # Indikator sederhana bila override sedang aktif
+    if ("H" in st.session_state.val_overrides) or ("I" in st.session_state.val_overrides):
+        st.caption("⚙️ Saat ini kolom H/I sedang menggunakan **override**.")
 
 # =========================
 # Template PDF (auto-load)
