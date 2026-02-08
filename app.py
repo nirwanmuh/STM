@@ -705,23 +705,23 @@ with st.expander("👤 Data Manager (Opsional)", expanded=False):
 # (Editor koordinat/style Halaman 2 untuk R/S DISENGAJA DIHILANGKAN dari UI)
 
 # ===== Override H & I — collapsible =====
-with st.expander("✏️ Override Kolom H & I (Opsional)", expanded=False):
+with st.expander("✏️ Override Data VP (Opsional)", expanded=False):
     # Ambil nilai saat ini: prioritas dari override, fallback ke parsed_AK
     current_h = st.session_state.val_overrides.get("H", (st.session_state.parsed_AK or {}).get("H", ""))
     current_i = st.session_state.val_overrides.get("I", (st.session_state.parsed_AK or {}).get("I", ""))
 
     with st.form("override_hi_form", clear_on_submit=False):
-        h_input = st.text_input(
-            "H — (judul bar kiri bawah, default center, max width 135px)",
-            value=str(current_h),
-            placeholder="contoh: TANGGAL BERANGKAT",
-            help="Isi untuk menimpa nilai H hasil parsing. Kosongkan untuk memakai nilai dari HTML."
-        )
         i_input = st.text_input(
-            "I — (judul bar kiri bawah, bold+underline, default center)",
+            "Nama VP",
             value=str(current_i),
-            placeholder="contoh: NAMA KARYAWAN",
+            placeholder="contoh: Nama VP",
             help="Isi untuk menimpa nilai I hasil parsing. Kosongkan untuk memakai nilai dari HTML."
+        )
+        h_input = st.text_input(
+            "Jabatan VP",
+            value=str(current_h),
+            placeholder="contoh: Jabatan VP",
+            help="Isi untuk menimpa nilai H hasil parsing. Kosongkan untuk memakai nilai dari HTML."
         )
 
         c1, c2 = st.columns(2)
