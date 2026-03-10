@@ -808,11 +808,12 @@ def _items_page1_from_state() -> List[Dict[str, object]]:
                 val = int(digits) if digits else ""
             text = "-" if (isinstance(val, int) and val == 0) or str(val).strip() == "" else str(val)
 
+
+        
         elif k == "A":
             base_a = (get_value_for_key("A") or "").strip()
             raw_nik = (st.session_state.parsed_AK or {}).get("NIK", "")
-            digits = "".join(ch for ch in str(raw_nik) if ch.isdigit())
-            nik_text = digits or str(raw_nik).strip()
+            nik_text = str(raw_nik).strip()  # tampilkan apa adanya, termasuk huruf/simbol
             if base_a or nik_text:
                 text = f"{base_a}  "
                 if nik_text:
@@ -951,10 +952,10 @@ def _items_page2_from_state() -> List[Dict[str, object]]:
             text = (get_value_for_key("A") or "").strip()
         elif key == "G2_AGAIN":
             text = (get_value_for_key("G") or "").strip()
+            
         elif key == "NIK2":
             raw_nik = (st.session_state.parsed_AK or {}).get("NIK", "")
-            digits = "".join(ch for ch in str(raw_nik) if ch.isdigit())
-            text = digits or (str(raw_nik).strip() if str(raw_nik).strip() else "")
+            text = str(raw_nik).strip().upper()  # tampilkan apa adanya
         else:
             base_key = key[:-1].upper() if key.endswith("2") else key.upper()
             if base_key in list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"):
